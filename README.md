@@ -11,7 +11,9 @@
 
 It **never diagnoses** and **never suggests medicines, supplements or doses**. Every answer ends with: *"This explains your report. It is not a diagnosis. Please show this report to your doctor."*
 
-> Status: work in progress for the DEV "Hacktoberfest Open-Source AI Challenge: Side Hustle" (October 2026). The rules engine, the safety checks and the training pipeline are in this repo. The web app and the worker are coming next. See [Roadmap](#roadmap).
+> Status: work in progress for the DEV "Hacktoberfest Open-Source AI Challenge: Side Hustle" (October 2026). See [Roadmap](#roadmap).
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/gajanand27-05/report-saathi)
 
 ## Who it's for
 
@@ -59,9 +61,25 @@ lre/rules.py         raw rows + patient -> flagged rows
 lre/checks.py        automatic safety and quality checks on an explanation
 lre/llm.py           tiny client for any OpenAI-compatible server (vLLM)
 lre/explainer_prompt.md  the explainer's system prompt
-training/            synthetic cases, teacher filtering
+lre/pdftext.py       PDF text lines, page images, age/sex from the header
+lre/reader.py        Gemma reads a page into rows; values checked against the PDF text
+lre/explainer.py     streams an explanation from the fine-tuned model
+app/                 FastAPI web app for Render: upload, result page, job queue, worker API, hourly cleanup
+worker/worker.py     runs on the DGX: polls the app, reader -> rules -> explainer, streams text back
+training/            synthetic cases, teacher filtering, 16-bit LoRA training
+render.yaml          Render blueprint: web service + Postgres + hourly cleanup cron
 tests/               pytest
 ```
+
+## Run it yourself
+
+- **Web app:** deploy the blueprint (button above). It creates the web service, a Postgres database and an hourly cleanup job, and generates `WORKER_TOKEN`.
+- **Worker** (any machine with an OpenAI-compatible server such as vLLM serving Gemma 4):
+  ```bash
+  pip install -r requirements-worker.txt
+  APP_URL=https://<your-app>.onrender.com WORKER_TOKEN=<token>   READER_URL=http://127.0.0.1:8301/v1 READER_MODEL=<gemma-4 vision model>   EXPLAINER_URL=http://127.0.0.1:8300/v1 EXPLAINER_MODEL=<explainer model>   python worker/worker.py
+  ```
+  The worker only makes outbound HTTPS calls, so the GPU machine needs no open ports.
 
 ## Run the tests
 
@@ -74,9 +92,9 @@ python -m pytest -q
 
 - [x] Rules table and engine, safety checks, synthetic data and teacher pipeline
 - [ ] Fine-tune the explainer (16-bit LoRA, Gemma 4 12B) and publish the evaluation
-- [ ] Reader (Gemma 4 vision + PDF text check)
-- [ ] Web app and job queue on Render, with a one-click `render.yaml` blueprint
-- [ ] Worker on the DGX, streaming explanations
+- [x] Reader (Gemma 4 vision + PDF text check), web app + job queue, DGX worker (tested end to end locally)
+- [ ] Deployed on Render (`render.yaml` blueprint) with the worker running on the DGX
+- [ ] Reader accuracy on real reports published
 - [ ] Review of the pregnancy ranges and critical limits by a gynaecologist
 
 ## Disclaimer

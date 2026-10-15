@@ -1,0 +1,35 @@
+# One-click deploy: Render dashboard -> New -> Blueprint -> this repo.
+services:
+  - type: web
+    name: report-saathi
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: report-saathi-db
+          property: connectionString
+      - key: WORKER_TOKEN
+        generateValue: true
+      - key: PYTHON_VERSION
+        value: 3.12.7
+  - type: cron
+    name: report-saathi-cleanup
+    runtime: python
+    plan: starter
+    schedule: "0 * * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m app.cleanup
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: report-saathi-db
+          property: connectionString
+      - key: PYTHON_VERSION
+        value: 3.12.7
+databases:
+  - name: report-saathi-db
+    plan: basic-256mb
