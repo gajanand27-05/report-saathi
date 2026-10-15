@@ -215,7 +215,7 @@ def evaluate(raw_rows: list, patient: dict, lab_notes=()) -> dict:
             if kind == "interval" and payload.lo is not None and payload.lo > rule.max_possible:
                 payload = payload.scaled(1 / rule.alt_scale)
         if (rule.min_possible is not None and v < rule.min_possible) or (rule.max_possible is not None and v > rule.max_possible):
-            row.update(flag="Unread", note="this value is not possible for this test; check it on the printed report")
+            row.update(flag="Unread", value=None, note="the value we read is not possible for this test; check it on the printed report")
             continue
         row["range_label"] = label
         if rule.kind == "posneg":

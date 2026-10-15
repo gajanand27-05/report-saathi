@@ -68,7 +68,8 @@ def test_platelet_unit_typo_fixed_with_note():
     assert (r["value"], r["flag"], r["note"]) == (3.73, "Normal", TYPO_NOTE)
 
 def test_impossible_value_is_unread():
-    assert one(row("Hemoglobin", "84", "g/dL", ("", "12-15")), P())["flag"] == "Unread"
+    r = one(row("Hemoglobin", "84", "g/dL", ("", "12-15")), P())
+    assert (r["flag"], r["value"]) == ("Unread", None)
 
 def test_critical_overrides():
     r = one(row("Potassium", "6.4", "mmol/L", ("", "3.5-5.1")), P(55))
