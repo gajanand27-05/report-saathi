@@ -49,7 +49,10 @@ _ALIASES = sorted(((a, r) for r in RULES.values() for a in r.aliases), key=lambd
 def match_rule(name: str) -> Rule | None:
     n = _norm(name)
     for alias, rule in _ALIASES:
-        if n == alias or n.startswith(alias + " ") or n.replace(" ", "") == alias.replace(" ", ""):
+        if n == alias or n.replace(" ", "") == alias.replace(" ", ""):
+            return rule
+        rest = n[len(alias):].strip() if n.startswith(alias + " ") else None
+        if rest is not None and not rest.startswith("/") and "ratio" not in rest:  # "X / Y ratio" is a different test
             return rule
     return None
 

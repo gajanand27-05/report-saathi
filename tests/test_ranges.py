@@ -4,6 +4,7 @@ def test_dash_range():
     assert parse_interval("12.0-15.0") == Interval(12.0, 15.0)
     assert parse_interval("36 - 46") == Interval(36, 46)
     assert parse_interval("150–450") == Interval(150, 450)
+    assert parse_interval("140�199") == Interval(140, 199)  # broken dash from PDF text
 
 def test_one_sided():
     assert parse_interval("<40") == Interval(None, 40, hi_incl=False)

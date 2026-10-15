@@ -34,6 +34,7 @@ class Interval:
 
 def _clean(t: str) -> str:
     t = t.replace("–", "-").replace("—", "-").replace("=<", "<=").replace("=>", ">=").replace("≤", "<=").replace("≥", ">=")
+    t = re.sub(r"(?<=\d)\s*�\s*(?=\d)", "-", t)  # PDFs often turn an en dash into U+FFFD
     t = re.sub(r"\bupto\b", "up to", t, flags=re.I)
     return re.sub(r"\s+", " ", t).strip()
 

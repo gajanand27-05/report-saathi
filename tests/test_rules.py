@@ -15,6 +15,10 @@ def test_match_rule_aliases():
     assert match_rule("Blood Glucose 2 hr").id == "GLU2H"
     assert match_rule("Thyroid Stimulating Hormone (TSH)").id == "TSH"
     assert match_rule("Anti-Mullerian Hormone") is None
+    # a longer name that only STARTS with another test's alias must not match it when it's a ratio
+    assert match_rule("Total Cholesterol / HDL Ratio").id == "CHOLHDL"
+    assert match_rule("Cholesterol / HDL ratio").id == "CHOLHDL"
+    assert match_rule("Urea / Creatinine Ratio") is None
 
 def test_trimester():
     assert (trimester(9), trimester(20), trimester(30), trimester(None)) == (1, 2, 3, None)
