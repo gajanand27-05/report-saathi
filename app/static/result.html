@@ -1,0 +1,43 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Your report explained</title>
+<style>
+:root{--bg:#fff;--fg:#1a1a1a;--muted:#5f6368;--card:#f4f6f8;--accent:#0b6e4f}
+@media (prefers-color-scheme:dark){:root{--bg:#121417;--fg:#eceff1;--muted:#a0a7ad;--card:#1d2125;--accent:#4fc39a}}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.6 system-ui,sans-serif}
+main{max-width:560px;margin:auto;padding:20px 16px}.muted{color:var(--muted)}
+.card{background:var(--card);border-radius:14px;padding:16px;margin:14px 0;overflow-wrap:anywhere}
+table{width:100%;border-collapse:collapse}td{padding:4px}td input{width:100%;font-size:1rem;padding:6px;box-sizing:border-box}
+button{width:100%;font-size:1.1rem;padding:14px;border:0;border-radius:12px;background:var(--accent);color:#fff;font-weight:700;margin-top:12px}
+h2{font-size:1.1rem;margin:1em 0 .3em}
+</style></head><body><main>
+<h1 style="font-size:1.4rem">Your report explained</h1>
+<p id="state" class="muted">In queue…</p>
+<div id="confirm" class="card" hidden></div>
+<div id="out" class="card" hidden></div>
+<p class="muted">Results are deleted after 24 hours. Save or screenshot this page if you need it.</p>
+</main><script>
+const id=location.pathname.split('/').pop(),t0=Date.now();
+const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+function md(s){return esc(s).split('\n').map(l=>/^#+\s/.test(l)?'<h2>'+l.replace(/^#+\s/,'')+'</h2>':
+ /^\s*[-*]\s/.test(l)?'• '+l.replace(/^\s*[-*]\s/,'')+'<br>':l+'<br>').join('').replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')}
+function showConfirm(j){const c=document.getElementById('confirm');if(!c.hidden)return;c.hidden=false;
+ c.innerHTML='<b>Does this match your report?</b><p class="muted">Fix any number that is wrong, then confirm.</p>'+
+ '<label>Age <input id="age" type="number" value="'+(j.patient?.age??'')+'"></label> '+
+ '<label>Sex <select id="sex"><option>F</option><option>M</option></select></label><table>'+
+ j.rows.map((r,i)=>'<tr><td>'+esc(r.test)+'</td><td><input data-i="'+i+'" value="'+esc(String(r.value??''))+'"></td><td>'+esc(r.unit||'')+'</td></tr>').join('')+
+ '</table><button id="ok">Yes, explain it</button>';
+ if(j.patient?.sex)document.getElementById('sex').value=j.patient.sex;
+ document.getElementById('ok').onclick=async()=>{const rows=j.rows.map((r,i)=>({...r,value:document.querySelector('[data-i="'+i+'"]').value}));
+  await fetch('/api/jobs/'+id+'/confirm',{method:'POST',headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({patient:{age:+document.getElementById('age').value||null,sex:document.getElementById('sex').value},rows})});
+  c.hidden=true;c.innerHTML=''}}
+async function tick(){const r=await fetch('/api/jobs/'+id);const st=document.getElementById('state');
+ if(!r.ok){st.textContent=(await r.json()).detail;return}
+ const j=await r.json(),slow=Date.now()-t0>180000;
+ st.textContent={queued:'In queue…',reading:'Reading your report…',confirm:'Please check the numbers below.',confirmed:'Thanks, starting…',
+  explaining:'Writing your explanation…',done:'',error:'Sorry: '+(j.error||'something went wrong')}[j.status]+(slow&&j.status!=='done'?' Taking longer than usual, please keep this page open.':'');
+ if(j.status==='confirm')showConfirm(j);
+ if(j.text){const o=document.getElementById('out');o.hidden=false;o.innerHTML=md(j.text)}
+ if(j.status!=='done'&&j.status!=='error')setTimeout(tick,1500)}
+tick();
+</script></body></html>
