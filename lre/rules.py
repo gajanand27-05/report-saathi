@@ -178,6 +178,21 @@ def _flag_bands(v, bands):
     return flag, f"{iv.text()} = {name}", note
 
 
+def _normal_for_pregnancy_note(v, rule: Rule, ranges: list, patient: dict):
+    """A value that's normal for pregnancy but outside the usual (non-pregnant) range: say so, or it looks wrong."""
+    kind, payload, _ = _choose(rule, ranges, dict(patient, pregnant=False, weeks=None))
+    if kind == "interval":
+        flag, used = _flag_interval(v, payload), payload.text()
+    elif kind == "bands":
+        flag, used, _ = _flag_bands(v, payload)
+    else:
+        return None
+    if flag == "Normal":
+        return None
+    word = "low" if "low" in flag.lower() else "high"
+    return f"normal for this stage of pregnancy; the usual non-pregnant range ({used}) would call it {word}"
+
+
 def _minor(v, iv: Interval, pct: float) -> bool:
     if pct <= 0 or iv is None:
         return False
@@ -236,6 +251,9 @@ def evaluate(raw_rows: list, patient: dict, lab_notes=()) -> dict:
         else:
             row.update(flag="Not reported", note="no reference range found")
             continue
+        if row["flag"] == "Normal" and patient.get("pregnant") is True and \
+                ("pregnan" in label or "trimester" in label):
+            row["note"] = row["note"] or _normal_for_pregnancy_note(v, rule, raw.get("ranges", []), patient)
         if rule.crit_low is not None and v < rule.crit_low:
             row["flag"] = "Critical low"
         elif rule.crit_high is not None and v > rule.crit_high:

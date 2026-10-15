@@ -105,3 +105,16 @@ def test_output_shape():
     assert set(out) == {"patient", "rows", "lab_notes"} and out["lab_notes"] == ["Impression: Normal smear"]
     assert set(out["rows"][0]) == {"test", "value", "unit", "range_used", "range_label", "flag", "importance", "note"}
     assert out["rows"][0]["test"] == "Haemoglobin"
+
+
+def test_normal_for_pregnancy_gets_a_note():
+    # Hb 11.2 at 22 weeks: normal for pregnancy, but the lab's printed (non-pregnant) range says low
+    r = one(row("Hemoglobin (Hb)", "11.2", "g/dL", ("", "12.0-15.0")), P(24, "F", True, 22))
+    assert r["flag"] == "Normal" and "pregnan" in r["note"] and "12-15" in r["note"]
+    # TSH 4.0 in the 1st trimester: normal by the lab's trimester range, but high by its adult range
+    tsh = [("Adults", "0.27-4.20"), ("TSH (1st Trimester)", "0.33-4.59")]
+    r = one(row("TSH", "4.4", "uIU/mL", *tsh), P(28, "F", True, 9))
+    assert r["flag"] == "Normal" and "pregnan" in r["note"]
+    # no note when the value is normal either way, or when not pregnant
+    assert one(row("Hb", "13.0", "g/dL", ("", "12.0-15.0")), P(24, "F", True, 22))["note"] is None
+    assert one(row("Hb", "13.0", "g/dL", ("", "12.0-15.0")), P())["note"] is None

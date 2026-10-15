@@ -7,7 +7,9 @@ ABNORMAL = {"Low", "High", "Borderline high", "Borderline low", "Critical low", 
 
 
 def _fmt(v):
-    return f"{v:g}" if isinstance(v, float) else str(v)
+    if isinstance(v, float):
+        return f"{v:.4f}".rstrip("0").rstrip(".")
+    return str(v)
 
 
 def derive_checks(inp: dict) -> dict:
@@ -15,7 +17,10 @@ def derive_checks(inp: dict) -> dict:
     imp1 = [r for r in rows if r["importance"] == 1 and r["flag"] in ABNORMAL and r["value"] is not None]
     pregnant = p.get("pregnant") is True
     is_hcg = any("HCG" in r["test"] for r in rows)
-    preg_label = any("pregnan" in (r["range_label"] or "") or "trimester" in (r["range_label"] or "") for r in rows)
+    # the explanation must mention pregnancy only where it changed something: an abnormal value judged by a
+    # pregnancy/trimester range, or a value that's normal only because she's pregnant (the rules add a note)
+    preg_label = any(("pregnan" in (r["range_label"] or "") or "trimester" in (r["range_label"] or ""))
+                     and r["flag"] not in ("Normal", "Not reported", "Unread") for r in rows)         or any("pregnan" in (r["note"] or "") for r in rows)
     return {
         "mention": [[_fmt(r["value"])] for r in imp1],
         "must_not": [] if pregnant or is_hcg else ["pregnan"],
@@ -42,7 +47,8 @@ def has(text, term):
 
 
 def num_present(text, s):
-    return re.search(r"(?<![\d.])" + re.escape(s) + r"(?![\d])", text) is not None
+    plain = re.sub(r"(?<=\d),(?=\d{3}(?!\d))", "", text)  # 59,740.54 -> 59740.54 ; 7,260 -> 7260
+    return any(re.search(r"(?<![\d.])" + re.escape(s) + r"(?![\d])", t) is not None for t in (text, plain))
 
 
 def auto_checks(case, text):

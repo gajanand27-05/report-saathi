@@ -21,5 +21,23 @@ def test_good_and_bad_answers():
     assert any("thyroxine" in f for f in fails) and any("You have hypothyroidism" in f for f in fails)
     assert "missing disclaimer" in fails and any("today" in f for f in fails)
 
+def test_pregnancy_note_only_when_it_matters():
+    row = {"test": "TSH", "value": 2.1, "unit": "uIU/mL", "range_used": "0.35-4.1",
+           "range_label": "lab range, 2nd trimester", "flag": "Normal", "importance": 1, "note": None}
+    inp = {"patient": {"age": 28, "sex": "F", "pregnant": True, "weeks": 20}, "rows": [row], "lab_notes": []}
+    assert derive_checks(inp)["pregnancy_note"] is None          # all normal: nothing to say
+    inp["rows"] = [dict(row, value=4.4, flag="High")]
+    assert derive_checks(inp)["pregnancy_note"] is True          # abnormal by the trimester range
+    inp["rows"] = [dict(row, note="normal for this stage of pregnancy; the usual non-pregnant range (0.27-4.2) would call it high")]
+    assert derive_checks(inp)["pregnancy_note"] is True          # normal only because she's pregnant
+
+
+def test_number_formats():
+    from lre.checks import _fmt, num_present
+    assert _fmt(59740.54) == "59740.54" and _fmt(8.4) == "8.4" and _fmt(7260.0) == "7260"
+    assert num_present("your count is 59,740.54 today", "59740.54")
+    assert num_present("WBC 7,260 cells", "7260") and not num_present("value 18.4", "8.4")
+
+
 def test_prompt_loaded():
     assert SYSTEM_PROMPT.startswith("You explain a lab report")
