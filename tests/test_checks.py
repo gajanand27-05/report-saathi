@@ -1,18 +1,18 @@
 from lre.checks import auto_checks, derive_checks, SYSTEM_PROMPT
 
 INP = {"patient": {"age": 51, "sex": "F", "pregnant": False, "weeks": None},
-       "rows": [{"test": "TSH", "value": 8.62, "unit": "uIU/mL", "range_used": "0.27-4.2",
+       "rows": [{"test": "TSH", "value": 8.71, "unit": "uIU/mL", "range_used": "0.27-4.2",
                  "range_label": "lab range, adults", "flag": "High", "importance": 1, "note": None}],
        "lab_notes": []}
 
 def test_derive_checks():
     c = derive_checks(INP)
-    assert c == {"mention": [["8.62"]], "must_not": ["pregnan"], "pregnancy_note": None,
+    assert c == {"mention": [["8.71"]], "must_not": ["pregnan"], "pregnancy_note": None,
                  "critical": False, "max_words": 300}
 
 def test_good_and_bad_answers():
     case = {"input": INP, "checks": derive_checks(INP)}
-    good = ("1 value needs a look. TSH (a signal from the brain to the thyroid gland) is 8.62, high for adults.\n"
+    good = ("1 value needs a look. TSH (a signal from the brain to the thyroid gland) is 8.71, high for adults.\n"
             "Questions to ask your doctor: Do I need more thyroid tests?\n"
             "This explains your report. It is not a diagnosis. Please show this report to your doctor.")
     assert auto_checks(case, good)[0] == []
