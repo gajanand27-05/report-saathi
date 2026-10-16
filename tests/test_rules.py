@@ -118,3 +118,13 @@ def test_normal_for_pregnancy_gets_a_note():
     # no note when the value is normal either way, or when not pregnant
     assert one(row("Hb", "13.0", "g/dL", ("", "12.0-15.0")), P(24, "F", True, 22))["note"] is None
     assert one(row("Hb", "13.0", "g/dL", ("", "12.0-15.0")), P())["note"] is None
+
+
+def test_display_names_and_ratio_aliases_match():
+    # our own display names must always match their rule (the generator and the eval use them)
+    from lre.rules import RULES
+    for rid, rule in RULES.items():
+        assert match_rule(rule.display).id == rid, rule.display
+    assert match_rule("LDL / HDL").id == "LDLHDL" and match_rule("Albumin / Globulin").id == "AGR"
+    r = one(row("LDL / HDL ratio", "2.66", "ratio", ("", "0-3.5")), P(75))
+    assert r["flag"] == "Normal"

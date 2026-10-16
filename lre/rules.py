@@ -34,7 +34,7 @@ def _load():
     with open(Path(__file__).with_name("rules.csv"), encoding="utf-8") as fh:
         for d in csv.DictReader(fh):
             rules[d["id"]] = Rule(
-                d["id"], d["display"], [_norm(a) for a in d["aliases"].split("|")], d["unit"], d["kind"],
+                d["id"], d["display"], [_norm(a) for a in d["aliases"].split("|")] + [_norm(d["display"])], d["unit"], d["kind"],
                 int(d["importance"]), float(d["minor_pct"] or 0), d["range_f"], d["range_m"],
                 {1: d["preg_t1"], 2: d["preg_t2"], 3: d["preg_t3"]}, _f(d["crit_low"]), _f(d["crit_high"]),
                 _f(d["min_possible"]), _f(d["max_possible"]), _f(d["alt_scale"]),
@@ -52,7 +52,8 @@ def match_rule(name: str) -> Rule | None:
         if n == alias or n.replace(" ", "") == alias.replace(" ", ""):
             return rule
         rest = n[len(alias):].strip() if n.startswith(alias + " ") else None
-        if rest is not None and not rest.startswith("/") and "ratio" not in rest:  # "X / Y ratio" is a different test
+        # "Total cholesterol / HDL ratio" must not match "total cholesterol"; a ratio alias may take a trailing "ratio"
+        if rest is not None and ("/" in alias or (not rest.startswith("/") and "ratio" not in rest)):
             return rule
     return None
 

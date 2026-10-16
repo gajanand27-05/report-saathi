@@ -32,6 +32,18 @@ def test_pregnancy_note_only_when_it_matters():
     assert derive_checks(inp)["pregnancy_note"] is True          # normal only because she's pregnant
 
 
+def test_jargon_and_filler_fail():
+    case = {"input": INP, "checks": derive_checks(INP)}
+    base = ("TSH (a signal from the brain to the thyroid gland) is 8.71, high for adults. {x}\n"
+            "Questions to ask your doctor: Do I need more thyroid tests?\n"
+            "This explains your report. It is not a diagnosis. Please show this report to your doctor.")
+    assert auto_checks(case, base.format(x="It can be higher in the early morning or after illness."))[0] == []
+    assert any("importance" in f for f in auto_checks(case, base.format(x="That is 1 importance-1 value."))[0])
+    assert any("reasons" in f for f in auto_checks(case, base.format(x="This can happen for several general health reasons."))[0])
+    # naming the reasons after "a few common reasons" is fine
+    assert auto_checks(case, base.format(x="This can happen for a few common reasons, such as illness or the time of day."))[0] == []
+
+
 def test_number_formats():
     from lre.checks import _fmt, num_present
     assert _fmt(59740.54) == "59740.54" and _fmt(8.4) == "8.4" and _fmt(7260.0) == "7260"

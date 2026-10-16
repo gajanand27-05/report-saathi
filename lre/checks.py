@@ -39,6 +39,10 @@ DEFAULT_MUST_NOT = [
     r"(?:anaemia|anemia|diabetes|prediabetes|pre-diabetes|hypothyroidism|hyperthyroidism|thyroid disease|"
     r"an? (?:\w+ )?infection|kidney disease|liver disease|fatty liver|high cholesterol|vitamin d deficiency)",
     r"you are (?:anaemic|anemic|diabetic|pre-?diabetic|hypothyroid)",
+    # internal field names leaking to the patient ("0 importance-1 values")
+    r"importance[- ]?\d", r"range_label", r"range_used",
+    # filler instead of reasons: "...can happen for several general health reasons." (nothing named after it)
+    r"(?:various|several|a few|many|different) (?:general |common |different |everyday )?(?:health )?(?:reasons|factors)\s*\.",
 ]
 
 
