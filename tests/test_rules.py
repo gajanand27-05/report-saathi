@@ -87,7 +87,7 @@ def test_posneg_and_text_and_not_reported_and_unknown():
     assert one(row("Beta HCG", "1834.2", "mIU/mL", ("", "< 5.3 : NEGATIVE")), P(29))["flag"] == "Positive"
     assert one(row("Beta HCG", "2.1", "mIU/mL", ("", "< 5.3 : NEGATIVE")), P(29))["flag"] == "Negative"
     assert one(row("Urine Glucose Fasting", "Nil", ""), P())["flag"] == "Normal"
-    assert one(row("Urine protein", "Trace", ""), P())["flag"] == "High"
+    assert one(row("Urine protein", "Trace", ""), P())["flag"] == "Positive"
     assert one(row("Blood Glucose 1 hr", "N/R", "mg/dL", ("", "<180")), P())["flag"] == "Not reported"
     u = one(row("Anti-Mullerian Hormone (AMH)", "0.9", "ng/mL", ("", "2-6.8")), P())
     assert u["flag"] == "Not reported" and "not in our rule table" in u["note"]
@@ -128,3 +128,58 @@ def test_display_names_and_ratio_aliases_match():
     assert match_rule("LDL / HDL").id == "LDLHDL" and match_rule("Albumin / Globulin").id == "AGR"
     r = one(row("LDL / HDL ratio", "2.66", "ratio", ("", "0-3.5")), P(75))
     assert r["flag"] == "Normal"
+
+
+# ---- urine routine, fever panel, antenatal screen (seen in real Indian reports) ----
+def test_urine_routine_does_not_clash_with_blood_tests():
+    rows = [row("Glucose", "Negative", "", ("", "Negative")), row("Proteins", "Positive(++)", "", ("", "Negative")),
+            row("Bilirubin", "Negative", "", ("", "Negative")), row("RBC", "6-8", "HPF", ("", "Nil")),
+            row("Specific Gravity", "1.020", "", ("", "1.010-1.030")), row("Reaction (pH)", "6.5", "", ("", "5.0-8.5")),
+            row("Colour", "Pale Yellow", "", ("", "Pale Yellow")), row("Appearance", "Turbid", "", ("", "Clear")),
+            row("PUS(WBC) Cells", "4-5", "HPF", ("", "0 - 5")), row("Proteins", "Trace", "", ("", "Negative"))]
+    out = evaluate(rows, P())["rows"]
+    got = [(r["test"], r["flag"]) for r in out]
+    assert got == [("Urine sugar", "Normal"), ("Urine protein", "Positive"), ("Urine bilirubin", "Normal"),
+                   ("Urine RBC", "High"), ("Urine specific gravity", "Normal"), ("Urine pH", "Normal"),
+                   ("Urine colour", "Normal"), ("Urine appearance", "Abnormal"), ("Urine pus cells", "Normal"),
+                   ("Urine protein", "Positive")]
+    assert out[1]["importance"] == 1 and out[-1]["importance"] == 2   # ++ matters, trace is minor
+
+def test_blood_glucose_still_blood_glucose():
+    assert one(row("Glucose - Fasting", "95", "mg/dL", ("", "70-100")), P())["test"] == "Glucose fasting"
+
+def test_serology_index_values():
+    rng = [("", "< 1.0 : Negative"), ("", "> 1.0 : Positive")]
+    neg = one(row("HIV 1 & 2 Antibody (ELISA)", "0.31", "S/Co", *rng), P())
+    assert (neg["flag"], neg["note"]) == ("Normal", None)
+    pos = one(row("Hepatitis B Surface antigen (HBsAg) ELISA", "3.2", "S/Co", *rng), P())
+    assert pos["flag"] == "Positive" and "screening" in pos["note"]
+    assert one(row("RPR/VDRL", "Non Reactive", "", ("", "Non Reactive")), P())["flag"] == "Normal"
+
+def test_dengue_and_widal():
+    d = one(row("Dengue NS1 Antigen (Rapid)", "Positive", "", ("", "Negative")), P())
+    assert d["flag"] == "Positive" and d["importance"] == 1 and "doctor" in d["note"]
+    assert one(row("Dengue IgM Antibody (Rapid)", "Negative", "", ("", "Negative")), P())["flag"] == "Normal"
+    w = [("", "1:80 & Above Significant")]
+    assert one(row('Salmonella Typhi "O" Antigen', "1:320", "", *w), P())["flag"] == "Positive"
+    assert one(row('Salmonella Typhi "H" Antigen', "1:40", "", *w), P())["flag"] == "Normal"
+    assert one(row('Salmonella Typhi "O" Antigen', "No Agglutination", "", *w), P())["flag"] == "Normal"
+
+def test_blood_group_and_rh_in_pregnancy():
+    assert one(row("Blood Group", "O", ""), P())["flag"] == "Normal"
+    rh = one(row("RH Group", "Negative", ""), P(28, "F", True, 12))
+    assert rh["flag"] == "Normal" and "pregnan" in rh["note"]
+    assert one(row("RH Group", "Positive", ""), P(28, "F", True, 12))["note"] is None
+
+def test_crp_and_egfr_alias():
+    assert one(row("C-Reactive Protein (CRP)", "24", "mg/L", ("", "< 10.0")), P())["flag"] == "High"
+    assert one(row("Estimated Glomerular Filtration Rate", "67", "", ("", "> 90 mL/min/1.73 m2")), P())["test"].startswith("eGFR")
+
+
+def test_urine_culture_hides_antibiotic_lists():
+    rows = [row("Sample Type", "URINE", ""), row("Organism(s) Isolated:", "Escherichia coli", ""),
+            row("Sensitive to:", "Amikacin,Nitrofurantoin", ""), row("Resistant to:", "Ampicillin", "")]
+    out = evaluate(rows, P())["rows"]
+    assert [r["test"] for r in out] == ["Urine culture: bacteria grown"]
+    assert out[0]["flag"] == "Positive" and "doctor" in out[0]["note"]
+    assert evaluate([row("Organism(s) Isolated:", "No growth", "")], P())["rows"][0]["flag"] == "Normal"

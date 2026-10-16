@@ -3,7 +3,8 @@ import json, pathlib, re
 
 SYSTEM_PROMPT = (pathlib.Path(__file__).with_name("explainer_prompt.md")).read_text(encoding="utf-8").strip()
 
-ABNORMAL = {"Low", "High", "Borderline high", "Borderline low", "Critical low", "Critical high", "Positive", "Negative"}
+ABNORMAL = {"Low", "High", "Borderline high", "Borderline low", "Critical low", "Critical high", "Positive", "Negative",
+            "Abnormal"}
 
 
 def _fmt(v):
@@ -22,7 +23,7 @@ def derive_checks(inp: dict) -> dict:
     preg_label = any(("pregnan" in (r["range_label"] or "") or "trimester" in (r["range_label"] or ""))
                      and r["flag"] not in ("Normal", "Not reported", "Unread") for r in rows)         or any("pregnan" in (r["note"] or "") for r in rows)
     return {
-        "mention": [[_fmt(r["value"])] for r in imp1],
+        "mention": [[_fmt(r["value"])] for r in imp1 if any(ch.isdigit() for ch in str(r["value"]))],
         "must_not": [] if pregnant or is_hcg else ["pregnan"],
         "pregnancy_note": True if pregnant and preg_label else None,
         "critical": any(r["flag"].startswith("Critical") for r in rows),
@@ -37,7 +38,9 @@ DEFAULT_MUST_NOT = [
     r"diagnosed with",
     r"you (?:have|may have|might have|probably have|are suffering from) (?:a |an )?(?:mild |slight |borderline )?"
     r"(?:anaemia|anemia|diabetes|prediabetes|pre-diabetes|hypothyroidism|hyperthyroidism|thyroid disease|"
-    r"an? (?:\w+ )?infection|kidney disease|liver disease|fatty liver|high cholesterol|vitamin d deficiency)",
+    r"an? (?:\w+ )?infection|kidney disease|liver disease|fatty liver|high cholesterol|vitamin d deficiency|"
+    r"dengue|typhoid|hiv|aids|hepatitis(?: [bc])?|syphilis|jaundice|a uti|uti)",
+    r"you are (?:hiv[- ])?positive for",
     r"you are (?:anaemic|anemic|diabetic|pre-?diabetic|hypothyroid)",
     # internal field names leaking to the patient ("0 importance-1 values")
     r"importance[- ]?\d", r"range_label", r"range_used",

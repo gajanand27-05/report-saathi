@@ -8,8 +8,19 @@ from .ranges import Interval, classify_label, parse_interval, split_range
 TYPO_NOTE = ("the lab printed the unit as 'lakhs/cmm', which must be a printing mistake; "
              "read as thousand/cmm")
 FLAGS = ("Normal", "Low", "High", "Borderline high", "Borderline low", "Critical low", "Critical high",
-         "Positive", "Negative", "Not reported", "Unread")
+         "Positive", "Negative", "Abnormal", "Not reported", "Unread")
 NOT_REPORTED = {"n/r", "nr", "not reported", "-", "--", ""}
+# What a positive screening result does and doesn't mean (never a diagnosis)
+SCREEN_NOTE = ("this is a screening test; a positive screening result is checked with a confirmatory test, "
+               "and your doctor will explain what it means")
+POSITIVE_NOTES = {"HBSAG": SCREEN_NOTE, "HCV": SCREEN_NOTE, "HIV": SCREEN_NOTE, "VDRL": SCREEN_NOTE,
+                  "DNS1": "please show this result to your doctor soon; only a doctor can say what it means together with your symptoms",
+                  "DIGM": "please show this result to your doctor soon; only a doctor can say what it means together with your symptoms",
+                  "DIGG": "a positive IgG often means an infection some time in the past; your doctor will explain it with your symptoms"}
+WIDAL_NOTE = "the Widal test can be raised for reasons other than typhoid, so your doctor will decide what it means"
+CULTURE_NOTE = ("the lab grew bacteria from the sample; your doctor will explain what this means and decide "
+                "about any treatment (the lab's list of medicines is for your doctor)")
+RH_NOTE ="an Rh negative blood group matters in pregnancy; your doctor will tell you what, if anything, is needed"
 
 
 @dataclass
@@ -179,6 +190,43 @@ def _flag_bands(v, bands):
     return flag, f"{iv.text()} = {name}", note
 
 
+def _posneg(v, rule: Rule, ranges: list, patient: dict) -> dict:
+    """Screening tests (HIV, hepatitis, VDRL, dengue) and beta-HCG: Negative or Positive, from text or an index value."""
+    if isinstance(v, str):
+        negative = any(w in v.lower() for w in rule.normal_text)
+        used = "Negative"
+    else:
+        kind, payload, label = _choose(rule, ranges, patient)
+        if kind == "bands":
+            hit = [b for b in payload if b[1].contains(v)] or sorted(
+                payload, key=lambda b: min(abs(v - x) for x in (b[1].lo, b[1].hi) if x is not None))
+            negative = re.search(r"neg|non", hit[0][0], re.I) is not None
+            neg_band = next((b for b in payload if re.search(r"neg|non", b[0], re.I)), None)
+            used = f"{neg_band[1].text()} = negative" if neg_band else ""
+        elif kind == "interval":  # a single printed range is the negative range ("< 5.3 : NEGATIVE")
+            negative, used = payload.contains(v), f"{payload.text()} = negative"
+        else:
+            return {"flag": "Not reported", "note": "no reference range found"}
+    note = None if negative else POSITIVE_NOTES.get(rule.id)
+    # a negative screening test is simply normal; beta-HCG keeps "Negative" (it matters if she thinks she's pregnant)
+    neg_flag = "Normal" if rule.kind == "sero" else "Negative"
+    return {"flag": neg_flag if negative else "Positive", "range_used": used, "note": note}
+
+
+def _titre(rv, ranges: list, rule: Rule) -> dict:
+    """Widal: '1:160' against '1:80 & Above Significant'. 'No Agglutination' is negative."""
+    s = str(rv).lower()
+    if any(w in s for w in rule.normal_text):
+        return {"flag": "Normal", "range_used": "no agglutination"}
+    m = re.search(r"1\s*:\s*(\d+)", s)
+    if not m:
+        return {"flag": "Not reported", "note": "we couldn't read this result"}
+    cut = next((int(c[1]) for r in ranges if (c := re.search(r"1\s*:\s*(\d+)", r.get("text", "")))), 160)
+    positive = int(m[1]) >= cut
+    return {"flag": "Positive" if positive else "Normal", "range_used": f"1:{cut} and above = significant",
+            "note": WIDAL_NOTE if positive else None}
+
+
 def _normal_for_pregnancy_note(v, rule: Rule, ranges: list, patient: dict):
     """A value that's normal for pregnancy but outside the usual (non-pregnant) range: say so, or it looks wrong."""
     kind, payload, _ = _choose(rule, ranges, dict(patient, pregnant=False, weeks=None))
@@ -208,6 +256,13 @@ def evaluate(raw_rows: list, patient: dict, lab_notes=()) -> dict:
         rule = match_rule(name)
         v = _value(raw.get("value"))
         rv = raw.get("value")
+        # Urine routine prints bare names ("Glucose", "RBC", "Blood"): a text result or an /HPF unit means urine
+        reported = not (isinstance(v, str) and v.lower() in NOT_REPORTED) and rv is not None
+        if reported and not name.lower().startswith("urine") and \
+                (rule is None or (rule.kind in ("num", "calc") and (isinstance(v, str) or "hpf" in unit.lower()))):
+            rule = match_rule("urine " + name) or rule
+        if rule is not None and rule.kind == "skip":  # e.g. antibiotic lists of a culture: never shown
+            continue
         row = {"test": rule.display if rule else name, "value": v if isinstance(v, float) and _plain_number(rv) else rv,
                "unit": unit, "range_used": "", "range_label": "", "flag": "Normal",
                "importance": rule.importance if rule else 1, "note": None}
@@ -222,9 +277,32 @@ def evaluate(raw_rows: list, patient: dict, lab_notes=()) -> dict:
         if isinstance(v, str) and v.lower() in NOT_REPORTED or raw.get("value") is None:
             row.update(flag="Not reported", value=None)
             continue
+        if rule.kind == "info":  # blood group, Rh: nothing to flag
+            row.update(flag="Normal", importance=2)
+            if rule.id == "RHGRP" and "neg" in str(rv).lower() and patient.get("pregnant") is True:
+                row.update(importance=1, note=RH_NOTE)
+            continue
+        if rule.kind == "culture":
+            grown = not any(w in str(rv).lower() for w in rule.normal_text)
+            row.update(flag="Positive" if grown else "Normal", range_used="no growth",
+                       note=CULTURE_NOTE if grown else None)
+            continue
+        if rule.kind == "titre":
+            row.update(**_titre(rv, raw.get("ranges", []), rule))
+            continue
+        if rule.kind in ("sero", "posneg"):
+            row.update(**_posneg(v, rule, raw.get("ranges", []), patient))
+            continue
         if rule.kind == "text" or isinstance(v, str):
-            ok = isinstance(v, str) and any(t in v.lower() for t in rule.normal_text)
-            row.update(flag="Normal" if ok else "High", range_used="/".join(rule.normal_text).title() or "")
+            normal_words = rule.normal_text
+            ok = isinstance(v, str) and any(t == v.lower().strip() or (len(t) > 2 and t in v.lower()) for t in normal_words)
+            detect = any(w in normal_words for w in ("negative", "nil", "absent"))
+            flag = "Normal" if ok else ("Positive" if detect else "Abnormal")
+            if rule.kind == "num" and not ok and isinstance(v, str):
+                flag = "High"  # e.g. urine RBC "Plenty" against a numeric range
+            row.update(flag=flag, range_used="/".join(normal_words).title() or "")
+            if flag == "Positive" and "trace" in str(rv).lower():
+                row["importance"] = 2
             continue
         kind, payload, label = _choose(rule, raw.get("ranges", []), patient)
         if rule.alt_scale and rule.max_possible is not None and v > rule.max_possible \
@@ -237,11 +315,6 @@ def evaluate(raw_rows: list, patient: dict, lab_notes=()) -> dict:
             row.update(flag="Unread", value=None, note="the value we read is not possible for this test; check it on the printed report")
             continue
         row["range_label"] = label
-        if rule.kind == "posneg":
-            neg = payload if kind == "interval" else None
-            row.update(flag="Negative" if neg and neg.contains(v) else "Positive",
-                       range_used=(neg.text() + " = negative") if neg else "")
-            continue
         if kind == "bands":
             flag, used, note = _flag_bands(v, payload)
             row.update(flag=flag, range_used=used, note=note or row["note"])

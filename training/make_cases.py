@@ -15,10 +15,27 @@ PANELS = {
     "kft": ["CREA", "UREA", "BUN", "BUNCR", "NA", "K", "CL", "UA", "EGFR"],
     "thyroid": ["T3", "T4", "TSH"], "tsh": ["TSH"], "ft4": ["TSH", "FT4"],
     "iron": ["IRON", "UIBC", "TIBC", "TSAT", "FERR"], "vit": ["VITD", "B12"], "minerals": ["CA", "MG"],
-    "hcg": ["HCG"], "urine": ["UPUS", "UPROT", "USUG"], "esr": ["ESR"],
+    "hcg": ["HCG"], "esr": ["ESR"],
+    "urine": ["UCOL", "UAPP", "USG", "UPH", "UPROT", "USUG", "UBIL", "UKET", "UBLD", "UURO", "ULEU", "UNIT",
+              "UPUS", "URBC", "UEPI", "UCAST", "UCRY", "UOTH"],
+    "fever": ["HB", "WBC", "NEUT", "LYMPH", "PLT", "WIDO", "WIDH", "WIDAH", "WIDBH", "DNS1", "DIGM", "DIGG", "CRP"],
+    "screen": ["HBSAG", "HCV", "HIV", "VDRL", "BGRP", "RHGRP"], "culture": ["UCORG"],
 }
-GENERAL = ["cbc", "sugar", "lipid", "lft", "kft", "thyroid", "tsh", "iron", "vit", "minerals", "urine", "esr", "random_sugar"]
-ANTENATAL = ["cbc", "ogtt", "thyroid", "tsh", "ft4", "iron", "urine", "hcg"]
+GENERAL = ["cbc", "sugar", "lipid", "lft", "kft", "thyroid", "tsh", "iron", "vit", "minerals", "urine", "esr", "random_sugar",
+           "fever", "fever", "culture"]
+ANTENATAL = ["cbc", "ogtt", "thyroid", "tsh", "ft4", "iron", "urine", "hcg", "screen", "screen"]
+# text results for the qualitative tests: (normal choices, abnormal choices)
+TEXT = {"UCOL": (["Pale Yellow", "Yellow", "Straw"], ["Dark Yellow", "Red", "Brown"]), "UAPP": (["Clear"], ["Slightly Turbid", "Turbid"]),
+        "UPROT": (["Negative", "Nil"], ["Trace", "Positive(+)", "Positive(++)", "Positive(+++)"]),
+        "USUG": (["Negative", "Nil"], ["Trace", "Positive(+)", "Positive(++)"]), "UBIL": (["Negative"], ["Positive(+)"]),
+        "UKET": (["Negative"], ["Positive(+)", "Positive(++)"]), "UBLD": (["Negative"], ["Positive(+)", "Trace"]),
+        "UURO": (["Normal"], ["Increased"]), "ULEU": (["Negative"], ["Positive(+)", "Positive(++)"]), "UNIT": (["Negative"], ["Positive"]),
+        "UCAST": (["NIL"], ["Granular casts seen", "Hyaline casts 1-2"]), "UCRY": (["NIL"], ["Calcium oxalate", "Uric acid"]),
+        "UOTH": (["NIL"], ["Bacteria present", "Yeast cells seen"]),
+        "DNS1": (["Negative"], ["Positive"]), "DIGM": (["Negative"], ["Positive"]), "DIGG": (["Negative"], ["Positive"]),
+        "VDRL": (["Non Reactive"], ["Reactive"]), "UCORG": (["No growth", "Sterile"], ["Escherichia coli", "Klebsiella pneumoniae", "Enterococcus faecalis"])}
+CELLS = {"UPUS": (["0-1", "1-2", "2-3", "3-4", "NIL"], ["8-10", "15-20", "25-30", "Plenty"]),
+         "URBC": (["NIL", "0-1", "1-2"], ["4-6", "10-12", "Plenty"]), "UEPI": (["1-2", "2-3", "3-4"], ["8-10", "Plenty"])}
 BANDS = {  # lab-style band printing for some tests
     "HBA1C": [("", "Non-Diabetic: <=5.6"), ("", "Pre Diabetic:5.7-6.4"), ("", "Diabetic: >=6.5")],
     "CHOL": [("", "<200: Desirable"), ("", "200-239: Borderline"), ("", "=>240: High")],
@@ -41,7 +58,7 @@ NOTES = ["Impression: S/O Normal Peripheral Smear", "RBC Morphology: Normocytic 
          "Impression: S/O Microcytic Hypochromic Anaemia", "RBC Morphology: Microcytic Hypochromic cells seen.",
          "Advise: Kindly correlate clinically", "Platelet Morphology: Adequate"]
 UNKNOWN = [("Anti-Mullerian Hormone (AMH)", "ng/mL", "2.0-6.8", (0.1, 8)), ("Prolactin", "ng/mL", "4.8-23.3", (2, 80)),
-           ("CRP (C-Reactive Protein)", "mg/L", "<6", (0.5, 60)), ("Homocysteine", "umol/L", "5-15", (4, 40))]
+           ("Serum Amylase", "U/L", "28-100", (20, 300)), ("Homocysteine", "umol/L", "5-15", (4, 40))]
 
 
 def sample_value(rng, rule, sex, preg_tri, abnormal_rate):
@@ -96,8 +113,24 @@ def make_case(rng, i):
     raws = []
     for tid in ids:
         rule = RULES[tid]
-        if rule.kind == "text":
-            val = rng.choices(["Nil", "Trace", "+", "++"], [0.75, 0.12, 0.08, 0.05])[0]
+        lab_name = rule.display.replace("Urine ", "").replace(" (pregnancy hormone)", "") if rng.random() < 0.6 else rule.display
+        if tid in TEXT or tid in CELLS:  # qualitative / cell-count results; positives rarer for infections
+            norm, abn = (TEXT.get(tid) or CELLS[tid])
+            p_abn = abnormal_rate * (0.5 if tid in ("DNS1", "DIGM", "DIGG", "VDRL", "UCORG") else 1.0)
+            val = rng.choice(abn) if rng.random() < p_abn else rng.choice(norm)
+            rtext = {"UPUS": "0 - 5", "URBC": "Nil", "UEPI": "0 - 5"}.get(tid, norm[0])
+            unit = "HPF" if tid in CELLS else ""
+            raws.append({"test": lab_name, "value": val, "unit": unit, "ranges": [{"label": "", "text": rtext}]}); continue
+        if rule.kind in ("titre",):
+            val = rng.choices(["No Agglutination", "1:20", "1:40", "1:80", "1:160", "1:320"], [0.4, 0.15, 0.15, 0.12, 0.12, 0.06])[0]
+            raws.append({"test": rule.display.replace("Widal test: ", ""), "value": val, "unit": "",
+                         "ranges": [{"label": "", "text": "1:80 & Above Significant"}]}); continue
+        if rule.kind == "sero":  # HBsAg / HCV / HIV: index value against "<1.0 Negative, >1.0 Positive"
+            val = round(rng.uniform(1.2, 25), 2) if rng.random() < 0.04 else round(rng.uniform(0.05, 0.9), 2)
+            raws.append({"test": rule.display, "value": str(val), "unit": "S/Co",
+                         "ranges": [{"label": "", "text": "< 1.0 : Negative"}, {"label": "", "text": "> 1.0 : Positive"}]}); continue
+        if rule.kind == "info":
+            val = rng.choice(["A", "B", "O", "AB"]) if tid == "BGRP" else rng.choices(["Positive", "Negative"], [0.9, 0.1])[0]
             raws.append({"test": rule.display, "value": val, "unit": "", "ranges": []}); continue
         if rule.kind == "posneg":
             val = rng.choice([round(rng.uniform(0.5, 4.9), 2), round(rng.uniform(50, 150000), 2)])

@@ -56,7 +56,7 @@ NA,Sodium,sodium,mmol/L,num,1,0,136-145,136-145,,,,120,160,90,200,,
 K,Potassium,potassium,mmol/L,num,1,0,3.5-5.1,3.5-5.1,,,,3.0,6.0,1,12,,
 CL,Chloride,chloride,mmol/L,num,2,0,98-107,98-107,,,,,,60,150,,
 UA,Uric acid,uric acid,mg/dL,num,1,0,2.4-5.7,3.4-7.0,,,,,,0.5,30,,
-EGFR,eGFR (kidney filtering rate),glomerular filtration rate (egfr)|egfr|estimated gfr,mL/min/1.73m2,num,1,0,>90,>90,,,,,,1,200,,
+EGFR,eGFR (kidney filtering rate),glomerular filtration rate (egfr)|estimated glomerular filtration rate|egfr|estimated gfr,mL/min/1.73m2,num,1,0,>90,>90,,,,,,1,200,,
 CA,Calcium,calcium,mg/dL,num,1,0,8.6-10.0,8.6-10.0,,,,6.5,13,2,20,,
 MG,Magnesium,magnesium,mg/dL,num,2,0,1.7-2.4,1.7-2.4,,,,,,0.3,10,,
 B12,Vitamin B12,vitamin b12|vitamin - b12|b12,pg/mL,num,1,0,197-771,197-771,,,,,,20,5000,,
@@ -71,6 +71,37 @@ TIBC,TIBC,iron binding capacity - total (tibc)|total iron binding capacity|tibc,
 TSAT,Transferrin saturation,transferrin saturation|transferrin,%,num,2,0,20-50,20-50,,,,,,1,100,,
 FERR,Ferritin (iron stores),ferritin|serum ferritin,ng/mL,num,1,0,15-150,30-400,,,,,,1,10000,,
 HCG,Beta HCG (pregnancy hormone),beta hcg|beta human chorionic gonadotropin|b-hcg|bhcg,mIU/mL,posneg,1,0,<5.3,<5.3,,,,,,0,1000000,,
-UPUS,Urine pus cells,pus cells|urine pus cells,/hpf,num,1,0,0-5,0-5,,,,,,0,500,,
-UPROT,Urine protein,urine protein|protein (urine)|urine albumin,,text,2,0,,,,,,,,,,,nil|negative|absent
-USUG,Urine sugar,urine sugar|urine glucose|urine glucose fasting|urine glucose 1 hr|urine glucose 2 hr,,text,2,0,,,,,,,,,,,nil|negative|absent
+UPUS,Urine pus cells,pus cells|urine pus cells|pus(wbc) cells|pus (wbc) cells|urine pus(wbc) cells,/hpf,num,1,0,0-5,0-5,,,,,,0,500,,nil|absent|negative
+UPROT,Urine protein,urine protein|urine proteins|protein (urine)|urine albumin,,text,1,0,,,,,,,,,,,nil|negative|absent
+USUG,Urine sugar,urine sugar|urine glucose|urine glucose fasting|urine glucose 1 hr|urine glucose 2 hr,,text,1,0,,,,,,,,,,,nil|negative|absent
+UCOL,Urine colour,urine colour|urine color,,text,2,0,,,,,,,,,,,pale yellow|yellow|straw|light yellow|colourless|colorless
+UAPP,Urine appearance,urine appearance,,text,2,0,,,,,,,,,,,clear
+USG,Urine specific gravity,urine specific gravity|specific gravity,,num,2,0,1.010-1.030,1.010-1.030,,,,,,1.000,1.060,,
+UPH,Urine pH,urine reaction (ph)|urine ph|urine reaction|reaction (ph),,num,2,0,5.0-8.5,5.0-8.5,,,,,,3,10,,
+UBIL,Urine bilirubin,urine bilirubin,,text,1,0,,,,,,,,,,,negative|nil|absent
+UKET,Urine ketones,urine ketones|urine ketone bodies|ketones|ketone bodies,,text,1,0,,,,,,,,,,,negative|nil|absent
+UBLD,Urine blood,urine blood|urine occult blood,,text,1,0,,,,,,,,,,,negative|nil|absent
+UURO,Urine urobilinogen,urine urobilinogen|urobilinogen,,text,2,0,,,,,,,,,,,normal|negative|nil
+ULEU,Urine leukocytes,urine leukocyte|urine leukocytes|urine leucocyte esterase|leukocyte esterase,,text,1,0,,,,,,,,,,,negative|nil|absent
+UNIT,Urine nitrites,urine nitrites|urine nitrite|nitrites|nitrite,,text,1,0,,,,,,,,,,,negative|nil|absent
+URBC,Urine RBC,urine rbc|urine red blood cells,/hpf,num,1,0,0-2,0-2,,,,,,0,500,,nil|absent|negative
+UEPI,Urine epithelial cells,urine epithelial cells|epithelial cells,/hpf,num,2,0,0-5,0-5,,,,,,0,500,,nil|absent|few|occasional
+UCAST,Urine casts,urine casts|casts,,text,1,0,,,,,,,,,,,nil|absent|negative
+UCRY,Urine crystals,urine crystals|crystals,,text,2,0,,,,,,,,,,,nil|absent|negative
+UOTH,Urine others,urine others,,text,2,0,,,,,,,,,,,nil|absent|negative|-|--|---|none
+DNS1,Dengue NS1 antigen,dengue ns1 antigen (rapid)|dengue ns1 antigen|dengue ns1|ns1 antigen,,sero,1,0,,,,,,,,,,,negative|non reactive|non-reactive
+DIGM,Dengue IgM antibody,dengue igm antibody (rapid)|dengue igm antibody|dengue igm,,sero,1,0,,,,,,,,,,,negative|non reactive|non-reactive
+DIGG,Dengue IgG antibody,dengue igg antibody (rapid)|dengue igg antibody|dengue igg,,sero,1,0,,,,,,,,,,,negative|non reactive|non-reactive
+WIDO,Widal test: Salmonella Typhi O,salmonella typhi o antigen|salmonella typhi o|s typhi o|widal o,,titre,1,0,,,,,,,,,,,no agglutination|negative
+WIDH,Widal test: Salmonella Typhi H,salmonella typhi h antigen|salmonella typhi h|s typhi h|widal h,,titre,1,0,,,,,,,,,,,no agglutination|negative
+WIDAH,Widal test: Salmonella Paratyphi AH,salmonella typhi ah antigen|salmonella paratyphi ah antigen|salmonella paratyphi a h|widal ah,,titre,2,0,,,,,,,,,,,no agglutination|negative
+WIDBH,Widal test: Salmonella Paratyphi BH,salmonella typhi bh antigen|salmonella paratyphi bh antigen|salmonella paratyphi b h|widal bh,,titre,2,0,,,,,,,,,,,no agglutination|negative
+HBSAG,Hepatitis B surface antigen (HBsAg),hepatitis b surface antigen (hbsag) elisa|hepatitis b surface antigen (hbsag)|hepatitis b surface antigen|hbsag,S/Co,sero,1,0,<1.0,<1.0,,,,,,0,1000,,negative|non reactive|non-reactive
+HCV,Hepatitis C antibody (HCV),hepatitis c virus (hcv antibody) elisa|hepatitis c virus (hcv antibody)|hcv antibody|anti hcv|anti-hcv,S/Co,sero,1,0,<1.0,<1.0,,,,,,0,1000,,negative|non reactive|non-reactive
+HIV,HIV 1 & 2 antibody,hiv 1 & 2 antibody (elisa)|hiv 1 & 2 antibody|hiv i & ii antibody|hiv antibody,S/Co,sero,1,0,<1.0,<1.0,,,,,,0,1000,,negative|non reactive|non-reactive
+VDRL,VDRL / RPR,rpr/vdrl|vdrl|rpr,,sero,1,0,,,,,,,,,,,negative|non reactive|non-reactive
+BGRP,Blood group,blood group|abo group|abo blood group,,info,2,0,,,,,,,,,,,
+RHGRP,Rh factor,rh group|rh factor|rh type|rh typing,,info,2,0,,,,,,,,,,,
+CRP,"CRP (C-reactive protein, a sign of inflammation)",c-reactive protein (crp)|c-reactive protein|c reactive protein|crp,mg/L,num,1,0,<10,<10,,,,,,0,500,,
+UCORG,Urine culture: bacteria grown,urine organism(s) isolated|organism(s) isolated|organism isolated|organisms isolated,,culture,1,0,,,,,,,,,,,no growth|sterile|nil|no organism
+UCSKIP,Urine culture details (not shown),sensitive to|intermediate to|resistant to|culture & sensitivity aerobic bacteria|culture and sensitivity|sample type|colony count cfu/ml|colony count|note,,skip,2,0,,,,,,,,,,,
