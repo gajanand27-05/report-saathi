@@ -183,3 +183,10 @@ def test_urine_culture_hides_antibiotic_lists():
     assert [r["test"] for r in out] == ["Urine culture: bacteria grown"]
     assert out[0]["flag"] == "Positive" and "doctor" in out[0]["note"]
     assert evaluate([row("Organism(s) Isolated:", "No growth", "")], P())["rows"][0]["flag"] == "Normal"
+
+
+def test_text_results_match_whole_words():
+    assert one(row("Colour", "Dark Yellow", "", ("", "Pale Yellow")), P())["flag"] == "Abnormal"
+    assert one(row("Colour", "Pale Yellow", "", ("", "Pale Yellow")), P())["flag"] == "Normal"
+    assert one(row("Glucose", "Negative (-)", "", ("", "Negative")), P())["flag"] == "Normal"
+    assert one(row("Nitrites", "Non-negative", "", ("", "Negative")), P())["flag"] == "Positive"

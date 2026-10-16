@@ -295,7 +295,9 @@ def evaluate(raw_rows: list, patient: dict, lab_notes=()) -> dict:
             continue
         if rule.kind == "text" or isinstance(v, str):
             normal_words = rule.normal_text
-            ok = isinstance(v, str) and any(t == v.lower().strip() or (len(t) > 2 and t in v.lower()) for t in normal_words)
+            vv = v.lower().strip() if isinstance(v, str) else ""
+            # exact, or the result STARTS with a normal word ("Negative (-)", "Straw coloured"); "Dark Yellow" is not "yellow"
+            ok = any(vv == t or (vv.startswith(t) and not vv[len(t):len(t) + 1].isalpha()) for t in normal_words)
             detect = any(w in normal_words for w in ("negative", "nil", "absent"))
             flag = "Normal" if ok else ("Positive" if detect else "Abnormal")
             if rule.kind == "num" and not ok and isinstance(v, str):
