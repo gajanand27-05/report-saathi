@@ -1,5 +1,5 @@
 """Gemma reads a report page into raw rows. Values are verified against the PDF text layer."""
-import base64, json, re
+import base64, concurrent.futures as cf, json, re
 from . import pdftext
 
 PROMPT = """Read this lab report page. Return ONLY JSON: {"rows": [...], "lab_notes": [...]}.
@@ -46,9 +46,11 @@ def read(file_bytes: bytes, filename: str, llm) -> dict:
         pages = pdftext.page_lines(file_bytes)
         ls = [l for p in pages for l in p]
         rows, notes = [], []
-        for png, page_ls in zip(pdftext.page_pngs(file_bytes), pages):  # each page with its OWN text only
-            d = _parse(llm(_image_msg(png, "\n\nThis page's exact text, for copying numbers:\n" + "\n".join(page_ls))))
-            rows += d["rows"]; notes += d["lab_notes"]
+        msgs = [_image_msg(png, "\n\nThis page's exact text, for copying numbers:\n" + "\n".join(page_ls))
+                for png, page_ls in zip(pdftext.page_pngs(file_bytes), pages)]  # each page with its OWN text only
+        with cf.ThreadPoolExecutor(min(8, len(msgs)) or 1) as ex:  # all pages at once; vLLM batches them
+            for d in ex.map(lambda m: _parse(llm(m)), msgs):  # map keeps page order
+                rows += d["rows"]; notes += d["lab_notes"]
         patient = pdftext.patient_from_text(ls)
         return {"patient": patient, "rows": verify(_dedupe(rows), ls), "lab_notes": list(dict.fromkeys(notes)),
                 "needs_confirm": patient["age"] is None or patient["sex"] is None}

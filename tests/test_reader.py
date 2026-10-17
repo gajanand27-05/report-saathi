@@ -33,3 +33,26 @@ def test_photo_needs_confirm():
     png = pdftext.page_pngs(PDF)[0]
     out = reader.read(png, "photo.png", fake_llm({"rows": [], "lab_notes": []}))
     assert out["needs_confirm"] is True
+
+
+def test_pages_read_in_parallel_keep_order():
+    import threading, time
+    doc = pymupdf.open()
+    for i in range(3):
+        doc.new_page().insert_text((40, 60), f"Age/Gender : 30 Yrs. / F   Test{i} : {i + 1}.5 g/dL", fontsize=10)
+    pdf = doc.tobytes()
+    active, peak = [0], [0]
+    lock = threading.Lock()
+
+    def llm(messages):
+        text = messages[0]["content"][1]["text"]
+        i = int(text.split("Test")[1][0])
+        with lock:
+            active[0] += 1; peak[0] = max(peak[0], active[0])
+        time.sleep(0.2)
+        with lock:
+            active[0] -= 1
+        return json.dumps({"rows": [{"test": f"Test{i}", "value": f"{i + 1}.5", "unit": "g/dL", "ranges": []}], "lab_notes": []})
+
+    out = reader.read(pdf, "r.pdf", llm)
+    assert [r["test"] for r in out["rows"]] == ["Test0", "Test1", "Test2"] and peak[0] > 1
