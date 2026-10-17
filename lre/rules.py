@@ -223,8 +223,11 @@ def _titre(rv, ranges: list, rule: Rule) -> dict:
         return {"flag": "Not reported", "note": "we couldn't read this result"}
     cut = next((int(c[1]) for r in ranges if (c := re.search(r"1\s*:\s*(\d+)", r.get("text", "")))), 160)
     positive = int(m[1]) >= cut
-    return {"flag": "Positive" if positive else "Normal", "range_used": f"1:{cut} and above = significant",
-            "note": WIDAL_NOTE if positive else None}
+    out = {"flag": "Positive" if positive else "Normal", "range_used": f"1:{cut} and above = significant",
+           "note": WIDAL_NOTE if positive else None}
+    if positive:
+        out["importance"] = 1  # a positive infection test is never a "small difference", even for AH/BH
+    return out
 
 
 def _normal_for_pregnancy_note(v, rule: Rule, ranges: list, patient: dict):

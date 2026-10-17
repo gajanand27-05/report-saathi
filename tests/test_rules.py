@@ -190,3 +190,10 @@ def test_text_results_match_whole_words():
     assert one(row("Colour", "Pale Yellow", "", ("", "Pale Yellow")), P())["flag"] == "Normal"
     assert one(row("Glucose", "Negative (-)", "", ("", "Negative")), P())["flag"] == "Normal"
     assert one(row("Nitrites", "Non-negative", "", ("", "Negative")), P())["flag"] == "Positive"
+
+
+def test_positive_widal_paratyphi_is_never_minor():
+    w = [("", "1:80 & Above Significant")]
+    pos = one(row('Salmonella Typhi "BH" Antigen', "1:320", "", *w), P())
+    assert (pos["flag"], pos["importance"]) == ("Positive", 1)
+    assert one(row('Salmonella Typhi "BH" Antigen', "1:40", "", *w), P())["importance"] == 2
