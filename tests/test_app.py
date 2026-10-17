@@ -20,7 +20,7 @@ def test_full_pdf_flow(client):
     job = client.get("/api/worker/next", headers=W).json()
     assert job["stage"] == "read" and base64.b64decode(job["file_b64"]).startswith(b"%PDF")
     assert job["pregnant"] is True and job["weeks"] == 26
-    assert client.get("/api/worker/next", headers=W).status_code == 204  # file is gone, job taken
+    assert client.get("/api/worker/next", headers=W).status_code == 204  # job taken (by this worker)
     client.post(f"/api/worker/{jid}/rows", headers=W, json={"patient": {"age": 25, "sex": "F"}, "rows": [], "lab_notes": [], "needs_confirm": False})
     assert client.get(f"/api/jobs/{jid}").json()["status"] == "explaining"
     client.post(f"/api/worker/{jid}/text", headers=W, json={"text": "Overview..."})
@@ -63,3 +63,16 @@ def test_worker_poll_cleans_up_old_jobs(client):
     m._last_cleanup = 0.0
     assert client.get("/api/worker/next", headers=W).status_code == 204   # the old job was deleted, not handed out
     assert client.get(f"/api/jobs/{jid}").status_code == 404
+
+
+def test_file_kept_until_read_and_stuck_jobs_requeued(client):
+    import app.db as dbm, time
+    db = dbm.connect(os.environ["DATABASE_URL"])
+    jid = client.post("/api/jobs", files={"file": ("r.pdf", b"%PDF-1.4 x", "application/pdf")}, data={"pregnant": "no"}).json()["id"]
+    assert client.get("/api/worker/next", headers=W).json()["id"] == jid          # claimed, e.g. by a worker that then crashes
+    assert db.get(jid)["file"] is not None                                         # file kept while reading
+    db.execute("UPDATE jobs SET picked_at = ? WHERE id = ?", (time.time() - 700, jid))
+    again = client.get("/api/worker/next", headers=W).json()                       # stale -> back in the queue
+    assert again["id"] == jid and again["file_b64"]
+    client.post(f"/api/worker/{jid}/rows", headers=W, json={"patient": {"age": 30, "sex": "F"}, "rows": [], "lab_notes": [], "needs_confirm": False})
+    assert db.get(jid)["file"] is None                                             # wiped once read

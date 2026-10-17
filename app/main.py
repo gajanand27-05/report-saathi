@@ -98,7 +98,7 @@ def worker_next(authorization: str = Header("")):
 @app.post("/api/worker/{jid}/rows")
 async def worker_rows(jid: str, req: Request, authorization: str = Header("")):
     auth(authorization); b = await req.json()
-    DB.update(jid, status="confirm" if b.get("needs_confirm") else "explaining",
+    DB.update(jid, status="confirm" if b.get("needs_confirm") else "explaining", file=None,  # read: wipe the file now
               patient=b["patient"], rows=b["rows"], lab_notes=b.get("lab_notes", []))
     return {"ok": True}
 
@@ -110,9 +110,9 @@ async def worker_text(jid: str, req: Request, authorization: str = Header("")):
 
 @app.post("/api/worker/{jid}/done")
 async def worker_done(jid: str, req: Request, authorization: str = Header("")):
-    auth(authorization); DB.update(jid, status="done", text=(await req.json())["text"]); return {"ok": True}
+    auth(authorization); DB.update(jid, status="done", file=None, text=(await req.json())["text"]); return {"ok": True}
 
 
 @app.post("/api/worker/{jid}/error")
 async def worker_error(jid: str, req: Request, authorization: str = Header("")):
-    auth(authorization); DB.update(jid, status="error", error=(await req.json())["message"]); return {"ok": True}
+    auth(authorization); DB.update(jid, status="error", file=None, error=(await req.json())["message"]); return {"ok": True}

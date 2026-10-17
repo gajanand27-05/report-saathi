@@ -52,14 +52,18 @@ class Db:
     def get(self, jid):
         return self.one("SELECT * FROM jobs WHERE id = ?", (jid,))
 
-    def take_next(self):
-        """Oldest queued/confirmed job; claimed with a status check so two workers can't take the same job."""
+    def take_next(self, stale=600):
+        """Oldest queued/confirmed job; claimed with a status check so two workers can't take the same job.
+        The file stays until the reader has finished (worker_rows wipes it); a job stuck in 'reading' for
+        more than `stale` seconds (worker crashed or a stray call claimed it) goes back to the queue."""
+        self.execute("UPDATE jobs SET status = 'queued', picked_at = NULL WHERE status = 'reading' AND picked_at < ? "
+                     "AND file IS NOT NULL", (time.time() - stale,))
         for _ in range(3):
             j = self.one("SELECT * FROM jobs WHERE status IN ('queued','confirmed') ORDER BY created_at LIMIT 1")
             if j is None:
                 return None
             new = "reading" if j["status"] == "queued" else "explaining"
-            cur = self.execute("UPDATE jobs SET status = ?, file = NULL, picked_at = ? WHERE id = ? AND status = ?",
+            cur = self.execute("UPDATE jobs SET status = ?, picked_at = ? WHERE id = ? AND status = ?",
                                (new, time.time(), j["id"], j["status"]))
             if cur.rowcount == 1:
                 return j
