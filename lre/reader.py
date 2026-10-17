@@ -43,10 +43,11 @@ def verify(rows: list, ls: list[str]) -> list:
 def read(file_bytes: bytes, filename: str, llm) -> dict:
     is_pdf = file_bytes[:4] == b"%PDF"
     if is_pdf and pdftext.has_text(file_bytes):
-        ls = pdftext.lines(file_bytes)
+        pages = pdftext.page_lines(file_bytes)
+        ls = [l for p in pages for l in p]
         rows, notes = [], []
-        for png in pdftext.page_pngs(file_bytes):
-            d = _parse(llm(_image_msg(png, "\n\nThe page's exact text, for copying numbers:\n" + "\n".join(ls))))
+        for png, page_ls in zip(pdftext.page_pngs(file_bytes), pages):  # each page with its OWN text only
+            d = _parse(llm(_image_msg(png, "\n\nThis page's exact text, for copying numbers:\n" + "\n".join(page_ls))))
             rows += d["rows"]; notes += d["lab_notes"]
         patient = pdftext.patient_from_text(ls)
         return {"patient": patient, "rows": verify(_dedupe(rows), ls), "lab_notes": list(dict.fromkeys(notes)),

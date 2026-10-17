@@ -14,15 +14,19 @@ def has_text(b: bytes) -> bool:
         return False
 
 
-def lines(b: bytes) -> list[str]:
-    out = []
+def page_lines(b: bytes) -> list[list[str]]:
+    """Text lines per page (words grouped by height, left to right)."""
+    pages = []
     for page in _doc(b):
         rows = {}
         for w in page.get_text("words"):
             rows.setdefault(round((w[1] + w[3]) / 2 / 3), []).append(w)
-        for key in sorted(rows):
-            out.append(" ".join(w[4] for w in sorted(rows[key], key=lambda w: w[0])))
-    return out
+        pages.append([" ".join(w[4] for w in sorted(rows[key], key=lambda w: w[0])) for key in sorted(rows)])
+    return pages
+
+
+def lines(b: bytes) -> list[str]:
+    return [l for page in page_lines(b) for l in page]
 
 
 def page_pngs(b: bytes, dpi: int = 150) -> list[bytes]:
