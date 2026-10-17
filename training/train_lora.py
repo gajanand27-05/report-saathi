@@ -1,7 +1,9 @@
 """16-bit LoRA of gemma-4-12B-it on explainer targets. Loss only on the answer.
 python training/train_lora.py --train data/train.jsonl --val data/val.jsonl --out runs/ft1 --epochs 1
 After a crash: the same command + --resume continues from <out>/ckpt (saved every --save-every steps)."""
-import argparse, json, math, pathlib, random, sys, time
+import argparse, json, math, os, pathlib, random, sys, time
+# On the shared DGX the PyTorch cache grew to 111 GB with only ~40 GB really used; expandable segments keep it close to real use.
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 import torch
 from peft import LoraConfig, get_peft_model
 from transformers import AutoModelForImageTextToText, AutoProcessor
@@ -55,6 +57,7 @@ sched = torch.optim.lr_scheduler.LambdaLR(opt, lambda s: min(1, (s + 1) / warm) 
 @torch.no_grad()
 def val_loss():
     model.eval(); tot = sum(model(**encode(ex)).loss.item() for ex in val); model.train()
+    torch.cuda.empty_cache()  # give the validation pass's cache back to the shared box
     return tot / max(len(val), 1)
 
 
