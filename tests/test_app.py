@@ -54,3 +54,12 @@ def test_cleanup(client, tmp_path):
 def test_pages(client):
     assert "Upload" in client.get("/").text
     assert client.get("/r/abc").status_code == 200
+
+
+def test_worker_poll_cleans_up_old_jobs(client):
+    import app.db as dbm, app.main as m, time
+    jid = client.post("/api/jobs", files={"file": ("r.pdf", b"%PDF-1.4", "application/pdf")}, data={"pregnant": "no"}).json()["id"]
+    dbm.connect(os.environ["DATABASE_URL"]).execute("UPDATE jobs SET created_at = ? WHERE id = ?", (time.time() - 25 * 3600, jid))
+    m._last_cleanup = 0.0
+    assert client.get("/api/worker/next", headers=W).status_code == 204   # the old job was deleted, not handed out
+    assert client.get(f"/api/jobs/{jid}").status_code == 404

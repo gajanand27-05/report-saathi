@@ -1,9 +1,11 @@
-# One-click deploy: Render dashboard -> New -> Blueprint -> this repo.
+# One-click deploy: Render dashboard -> New -> Blueprint -> this repo. Free plan, no card needed.
+# Jobs older than 24 h are deleted by the app itself (on the worker's polls), so no cron service is needed.
+# For an always-on paid setup: plan: starter for the web service, basic-256mb for the database.
 services:
   - type: web
     name: report-saathi
     runtime: python
-    plan: starter
+    plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /
@@ -16,20 +18,6 @@ services:
         generateValue: true
       - key: PYTHON_VERSION
         value: 3.12.7
-  - type: cron
-    name: report-saathi-cleanup
-    runtime: python
-    plan: starter
-    schedule: "0 * * * *"
-    buildCommand: pip install -r requirements.txt
-    startCommand: python -m app.cleanup
-    envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: report-saathi-db
-          property: connectionString
-      - key: PYTHON_VERSION
-        value: 3.12.7
 databases:
   - name: report-saathi-db
-    plan: basic-256mb
+    plan: free

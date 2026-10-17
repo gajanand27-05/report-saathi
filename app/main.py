@@ -1,4 +1,4 @@
-import base64, os, pathlib
+import base64, os, pathlib, time
 from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response
 from . import db as dbm
@@ -65,6 +65,17 @@ def stats(shop: str):
     return {"shop": shop, "reports": DB.shop_count(shop)}
 
 
+_last_cleanup = 0.0
+
+
+def cleanup_if_due(every=600):
+    """Delete jobs older than 24 h, at most every 10 min. Runs on the worker's polls, so no cron service is needed."""
+    global _last_cleanup
+    if time.time() - _last_cleanup >= every:
+        _last_cleanup = time.time()
+        DB.delete_older_than(24 * 3600)
+
+
 def auth(h):
     if not TOKEN or h != f"Bearer {TOKEN}":
         raise HTTPException(401, "bad token")
@@ -73,6 +84,7 @@ def auth(h):
 @app.get("/api/worker/next")
 def worker_next(authorization: str = Header("")):
     auth(authorization)
+    cleanup_if_due()
     j = DB.take_next()
     if not j:
         return Response(status_code=204)

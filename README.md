@@ -64,16 +64,16 @@ lre/explainer_prompt.md  the explainer's system prompt
 lre/pdftext.py       PDF text lines, page images, age/sex from the header
 lre/reader.py        Gemma reads a page into rows; values checked against the PDF text
 lre/explainer.py     streams an explanation from the fine-tuned model
-app/                 FastAPI web app for Render: upload, result page, job queue, worker API, hourly cleanup
+app/                 FastAPI web app for Render: upload, result page, job queue, worker API, 24-hour cleanup
 worker/worker.py     runs on the DGX: polls the app, reader -> rules -> explainer, streams text back
 training/            synthetic cases, teacher filtering, 16-bit LoRA training
-render.yaml          Render blueprint: web service + Postgres + hourly cleanup cron
+render.yaml          Render blueprint: web service + Postgres (free plan)
 tests/               pytest
 ```
 
 ## Run it yourself
 
-- **Web app:** deploy the blueprint (button above). It creates the web service, a Postgres database and an hourly cleanup job, and generates `WORKER_TOKEN`.
+- **Web app:** deploy the blueprint (button above). It creates the web service and a Postgres database on Render's **free plan** (no card needed) and generates `WORKER_TOKEN`. Jobs older than 24 hours are deleted by the app itself whenever the worker checks in. For an always-on paid setup, change the plans in `render.yaml`.
 - **Worker** (any machine with an OpenAI-compatible server such as vLLM serving Gemma 4):
   ```bash
   pip install -r requirements-worker.txt
