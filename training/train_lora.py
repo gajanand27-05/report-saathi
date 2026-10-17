@@ -1,5 +1,6 @@
 """16-bit LoRA of gemma-4-12B-it on explainer targets. Loss only on the answer.
-python training/train_lora.py --train data/train.jsonl --val data/val.jsonl --out runs/ft1 --epochs 1"""
+python training/train_lora.py --train data/train.jsonl --val data/val.jsonl --out runs/ft1 --epochs 1
+After a crash: the same command + --resume continues from <out>/ckpt (saved every --save-every steps)."""
 import argparse, json, math, pathlib, random, sys, time
 import torch
 from peft import LoraConfig, get_peft_model
@@ -13,6 +14,8 @@ ap.add_argument("--train", required=True); ap.add_argument("--val"); ap.add_argu
 ap.add_argument("--epochs", type=float, default=1); ap.add_argument("--max-steps", type=int, default=0)
 ap.add_argument("--lr", type=float, default=1e-4); ap.add_argument("--rank", type=int, default=16)
 ap.add_argument("--accum", type=int, default=8); ap.add_argument("--eval-every", type=int, default=50)
+ap.add_argument("--save-every", type=int, default=25)
+ap.add_argument("--resume", action="store_true", help="continue from <out>/ckpt after a crash (same command + --resume)")
 args = ap.parse_args()
 out = pathlib.Path(args.out); out.mkdir(parents=True, exist_ok=True)
 log = open(out / "train.log", "a")
@@ -56,9 +59,28 @@ def val_loss():
 
 
 say(f"train {len(train)} val {len(val)} steps {steps} accum {args.accum} lr {args.lr} rank {args.rank}")
-if val: say(f"step 0 val_loss {val_loss():.4f}")
-model.train()
 rng, order, step, micro, t0, run, best = random.Random(42), [], 0, 0, time.time(), 0.0, float("inf")
+CKPT = out / "ckpt"  # checkpoint every --save-every steps: adapter + optimizer + scheduler + data order
+
+
+def save_ckpt():
+    model.save_pretrained(CKPT)
+    torch.save({"opt": opt.state_dict(), "sched": sched.state_dict(), "step": step, "best": best,
+                "order": order, "rng": rng.getstate()}, CKPT / "trainer_state.pt")
+
+
+if args.resume and (CKPT / "trainer_state.pt").exists():
+    from peft import set_peft_model_state_dict
+    from safetensors.torch import load_file
+    set_peft_model_state_dict(model, load_file(str(CKPT / "adapter_model.safetensors")))
+    st = torch.load(CKPT / "trainer_state.pt", weights_only=False)
+    opt.load_state_dict(st["opt"]); sched.load_state_dict(st["sched"])
+    step, best, order = st["step"], st["best"], st["order"]; rng.setstate(st["rng"])
+    say(f"RESUMED from step {step} (best val_loss {best:.4f})")
+elif val:
+    say(f"step 0 val_loss {val_loss():.4f}")
+step0 = step
+model.train()
 while step < steps:
     if not order:
         order = list(range(len(train))); rng.shuffle(order)
@@ -68,12 +90,15 @@ while step < steps:
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         opt.step(); sched.step(); opt.zero_grad(set_to_none=True); step += 1
         if step % 5 == 0:
-            say(f"step {step}/{steps} loss {run / 5:.4f} {(time.time() - t0) / step:.1f}s/step "
-                f"eta {(steps - step) * (time.time() - t0) / step / 60:.0f}min mem {torch.cuda.max_memory_allocated() / 2**30:.1f}G")
+            per = (time.time() - t0) / max(step - step0, 1)
+            say(f"step {step}/{steps} loss {run / 5:.4f} {per:.1f}s/step "
+                f"eta {(steps - step) * per / 60:.0f}min mem {torch.cuda.max_memory_allocated() / 2**30:.1f}G")
             run = 0.0
         if val and (step % args.eval_every == 0 or step == steps):
             v = val_loss(); say(f"step {step} val_loss {v:.4f}")
             if v < best:
                 best = v; model.save_pretrained(out / "adapter_best")
+        if step % args.save_every == 0 and step < steps:
+            save_ckpt(); say(f"checkpoint saved at step {step}")
 model.save_pretrained(out / "adapter_last")
 say("TRAINED")
