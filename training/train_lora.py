@@ -98,7 +98,7 @@ while step < steps:
             v = val_loss(); say(f"step {step} val_loss {v:.4f}")
             if v < best:
                 best = v; model.save_pretrained(out / "adapter_best")
-        if step % args.save_every == 0 and step < steps:
+        if step % args.save_every == 0:  # includes the final step, so a resume test of N steps resumes from N
             save_ckpt(); say(f"checkpoint saved at step {step}")
 model.save_pretrained(out / "adapter_last")
 say("TRAINED")
