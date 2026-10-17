@@ -53,3 +53,10 @@ def test_number_formats():
 
 def test_prompt_loaded():
     assert SYSTEM_PROMPT.startswith("You explain a lab report")
+
+
+def test_all_normal_report_has_no_questions_section():
+    row = dict(INP["rows"][0], value=2.1, flag="Normal")
+    inp = dict(INP, rows=[row])
+    assert "questions to ask" in derive_checks(inp)["must_not"]
+    assert "questions to ask" not in derive_checks(INP)["must_not"]

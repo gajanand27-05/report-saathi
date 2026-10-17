@@ -24,7 +24,8 @@ def derive_checks(inp: dict) -> dict:
                      and r["flag"] not in ("Normal", "Not reported", "Unread") for r in rows)         or any("pregnan" in (r["note"] or "") for r in rows)
     return {
         "mention": [[_fmt(r["value"])] for r in imp1 if any(ch.isdigit() for ch in str(r["value"]))],
-        "must_not": [] if pregnant or is_hcg else ["pregnan"],
+        # nothing worth asking about -> no questions section (ft1 learned to add one anyway)
+        "must_not": ([] if pregnant or is_hcg else ["pregnan"]) + ([] if imp1 else ["questions to ask"]),
         "pregnancy_note": True if pregnant and preg_label else None,
         "critical": any(r["flag"].startswith("Critical") for r in rows),
         "max_words": 400 if len(imp1) > 6 or len(rows) > 25 else 300,
