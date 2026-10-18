@@ -1,22 +1,22 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Example · Report Saathi</title>
 <style>
-:root{--bg:#fff;--fg:#1a1a1a;--muted:#5f6368;--card:#f4f6f8;--accent:#0b6e4f;--line:#dfe3e7}
-@media (prefers-color-scheme:dark){:root{--bg:#121417;--fg:#eceff1;--muted:#a0a7ad;--card:#1d2125;--accent:#4fc39a;--line:#2c3237}}
+:root{--bg:#fff;--fg:#1a1a1a;--muted:#5f6368;--card:#f4f6f8;--accent:#0b6e4f;--line:#dfe3e7;--warn:#9a5b00}
+@media (prefers-color-scheme:dark){:root{--bg:#121417;--fg:#eceff1;--muted:#a0a7ad;--card:#1d2125;--accent:#4fc39a;--line:#2c3237;--warn:#f0b35a}}
 body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.6 system-ui,sans-serif}
 main{max-width:560px;margin:auto;padding:20px 16px}.muted{color:var(--muted)}
 .card{background:var(--card);border-radius:14px;padding:16px;margin:14px 0;overflow-wrap:anywhere}
 .tag{display:inline-block;font-size:.8rem;font-weight:700;color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:1px 10px}
 h1{font-size:1.4rem;margin:.4em 0 .2em}h2{font-size:1.05rem;margin:0 0 .4em}
 .row{padding:8px 0;border-bottom:1px solid var(--line)}.row:last-child{border-bottom:0}
-.top{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px}.flag{color:var(--accent)}
+.top{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px}.flag{color:var(--accent)}.flag.off{color:var(--warn)}
 .note{font-size:.85rem;color:var(--muted)}
 a.btn{display:block;text-align:center;font-size:1.1rem;padding:14px;border-radius:12px;background:var(--accent);color:#fff;font-weight:700;text-decoration:none;margin-top:16px}
 </style></head><body><main>
 <span class="tag">Example</span>
 <h1>How Report Saathi explains a report</h1>
 <p class="muted">This is a made-up report, not a real person's. It shows the three steps every upload goes through.</p>
-<div class="card"><h2>1 · What the reader found</h2><p id="who" class="muted"></p><p class="muted" style="margin:0">Gemma 4 reads each page. Every number it returns must appear in the PDF's own text, or it is marked "couldn't read".</p></div>
+<div class="card"><h2>1 · What the reader found</h2><p id="who" class="muted"></p><p class="muted" style="margin:0">For this made-up report the values were typed in. For a real upload, Gemma 4 reads each page, and every number it returns must appear in the PDF's own text, or it is marked "couldn't read".</p></div>
 <div class="card"><h2>2 · What the rules decided (no AI)</h2><div id="rows"></div>
 <p class="muted" style="margin-bottom:0">A fixed table decides normal, low, high or critical, using the lab's printed range and, in pregnancy, the trimester range.</p></div>
 <div class="card"><h2>3 · The explanation</h2><div id="out">Loading…</div><p id="by" class="note"></p></div>
@@ -32,10 +32,10 @@ const embedded=document.getElementById('ex');
  const p=e.patient;
  document.getElementById('who').textContent=p.age+' years, '+(p.sex==='F'?'female':'male')+(p.pregnant?', pregnant ('+p.weeks+' weeks, as she told the app)':', not pregnant')+'.';
  document.getElementById('rows').innerHTML=e.rows.map(r=>'<div class="row"><div class="top"><b>'+esc(r.test)+'</b><span>'+
-   esc(r.value??'')+' '+esc(r.unit||'')+' · <b class="flag">'+esc(r.flag)+'</b></span></div>'+
+   esc(r.value??'')+' '+esc(r.unit||'')+' · <b class="flag'+(r.flag==='Normal'?'':' off')+'">'+esc(r.flag)+'</b></span></div>'+
    '<div class="note">Range used: '+esc(r.range_used||'')+(r.range_label?' ('+esc(r.range_label)+')':'')+'</div>'+
    (r.note?'<div class="note">Note: '+esc(r.note)+'</div>':'')+'</div>').join('');
  const o=document.getElementById('out');o.style.whiteSpace='normal';o.innerHTML=md(e.text);
- document.getElementById('by').textContent='Written by '+e.model+'. In the app, this text streams in as the model writes it.';
+ document.getElementById('by').textContent='Written by '+e.model+(e.prompt?' with prompt '+e.prompt:'')+', in our test run (not edited). The live app uses the same model and prompt, and the text streams in as it is written.';
 }).catch(()=>{document.getElementById('out').textContent='Could not load the example.'});
 </script></body></html>

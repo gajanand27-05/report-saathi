@@ -1,26 +1,27 @@
 {
  "synthetic": true,
- "case": "S13_hb_T2_normal_for_preg",
- "model": "Gemma 4 31B",
- "eval_tag": "v2-31b-base",
+ "case": "S12_hb_T1_low",
+ "model": "Gemma 4 12B, fine-tuned (ft2)",
+ "prompt": "v1.4",
+ "eval_tag": "v3-ft2",
  "patient": {
-  "age": 24,
+  "age": 26,
   "sex": "F",
   "pregnant": true,
-  "weeks": 22
+  "weeks": 10
  },
  "rows": [
   {
    "test": "Haemoglobin",
-   "value": 11.2,
+   "value": 10.8,
    "unit": "g/dL",
-   "range_used": ">=10.5",
-   "range_label": "pregnancy range, 2nd trimester (our table); the lab's non-pregnant range 12.0-15.0 would call it low",
-   "flag": "Normal",
+   "range_used": ">=11.0",
+   "range_label": "pregnancy range, 1st trimester (our table)",
+   "flag": "Low",
    "importance": 1,
-   "note": "normal for this stage of pregnancy; the usual non-pregnant range (12-15) would call it low"
+   "note": null
   }
  ],
  "lab_notes": [],
- "text": "Overview: All your results are within the normal range. There are 0 values worth asking your doctor about.\n\nNormal: Your haemoglobin (the protein in your blood that carries oxygen) is normal.\n\nNotes: Your haemoglobin is normal for this stage of pregnancy, though it would be considered low if you were not pregnant.\n\nThis explains your report. It is not a diagnosis. Please show this report to your doctor."
+ "text": "Overview: There is 1 value worth asking your doctor about.\n\nWorth asking about:\nHaemoglobin measures the protein in your blood that carries oxygen. Your value is 10.8 g/dL, which is low. The normal range is different for people who are pregnant. Low haemoglobin is commonly linked to low iron.\n\nQuestions to ask your doctor:\n- What does this haemoglobin level mean for my pregnancy?\n- Do I need any further tests to check my iron levels?\n\nThis explains your report. It is not a diagnosis. Please show this report to your doctor."
 }
