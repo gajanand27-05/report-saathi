@@ -255,6 +255,10 @@ def _minor(v, iv: Interval, pct: float) -> bool:
 
 
 def evaluate(raw_rows: list, patient: dict, lab_notes=()) -> dict:
+    # The report's own sex wins over the upload form: someone may upload a family member's report and answer the
+    # pregnancy question about themselves. A male report is never judged by pregnancy ranges.
+    if str(patient.get("sex") or "").upper().startswith("M"):
+        patient = dict(patient, pregnant=False, weeks=None)
     out = []
     for raw in raw_rows:
         name, unit = raw.get("test", ""), raw.get("unit", "") or ""

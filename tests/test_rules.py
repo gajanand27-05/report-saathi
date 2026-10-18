@@ -199,3 +199,13 @@ def test_positive_widal_paratyphi_is_never_minor():
     pos = one(row('Salmonella Typhi "BH" Antigen', "1:320", "", *w), P())
     assert (pos["flag"], pos["importance"]) == ("Positive", 1)
     assert one(row('Salmonella Typhi "BH" Antigen', "1:40", "", *w), P())["importance"] == 2
+
+
+def test_male_report_never_uses_pregnancy_ranges():
+    # a pregnant woman uploads her father's report and answers "yes" about herself
+    rows = [row("Hemoglobin", "11.0", "g/dL", ("", "13.0-17.0"))]
+    out = evaluate(rows, {"age": 62, "sex": "M", "pregnant": True, "weeks": 20})
+    assert out["patient"]["pregnant"] is False and out["patient"]["weeks"] is None
+    assert out["rows"][0]["flag"] == "Low" and "pregnan" not in (out["rows"][0]["range_label"] or "")
+    # the same values for a woman 20 weeks pregnant use the trimester range
+    assert "pregnan" in evaluate(rows, {"age": 28, "sex": "F", "pregnant": True, "weeks": 20})["rows"][0]["range_label"]
