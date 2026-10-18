@@ -1,0 +1,13 @@
+# Render's free plan puts the web app to sleep after ~15 minutes without traffic; the first visit then waits ~1 minute.
+# While the DGX worker runs, its polling keeps the app awake. This keeps it awake when the worker is off too (e.g. during judging).
+name: keep-alive
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - run: curl -fsS --max-time 120 https://report-saathi.onrender.com/api/health
