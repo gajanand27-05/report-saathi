@@ -14,6 +14,7 @@ ol.steps{list-style:none;margin:0;padding:0}
 ol.steps li{display:flex;align-items:center;gap:10px;padding:5px 0;color:var(--muted)}
 ol.steps .ic{flex:none;width:1.5em;height:1.5em;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-size:.8rem;font-weight:700}
 ol.steps li.done{color:var(--fg)}ol.steps li.done .ic{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+ol.steps li.fail{color:var(--fg);font-weight:600}ol.steps li.fail .ic{border-color:var(--warn);color:var(--warn)}
 ol.steps li.now{color:var(--fg);font-weight:600}ol.steps li.now .ic{border-color:var(--accent);animation:pulse 1.2s ease-in-out infinite}
 @keyframes pulse{50%{box-shadow:0 0 0 5px color-mix(in srgb,var(--accent) 25%,transparent)}}
 @media (prefers-reduced-motion:reduce){ol.steps li.now .ic{animation:none}}
@@ -62,9 +63,11 @@ function render(text,crit){
  const title={overview:'',"worth asking about":'Worth asking your doctor about',"small differences":'Small differences',normal:'Normal',notes:'Notes',"questions to ask your doctor":'Questions to ask your doctor'};
  return secs.map(s=>'<div class="sec'+(s.k==='worth asking about'?' worth':'')+(s.k.startsWith('questions')?' qs':'')+'">'+
    (title[s.k]?'<h2>'+title[s.k]+'</h2>':'')+body(s.lines)+'</div>').join('')+(disc?'<p class="disc">'+esc(disc)+'</p>':'')}
-function steps(st){const at={queued:0,reading:1,confirm:1,confirmed:2,explaining:3,done:4,error:-1}[st];
- [...document.querySelectorAll('#steps li')].forEach((li,i)=>{li.className=at===4||i<at?'done':i===at?'now':'';
-  li.querySelector('.ic').textContent=(at===4||i<at)?'✓':i+1})}
+function steps(st,j){const failed=st==='error';
+ // on error, show where it stopped: rows were read -> it failed while explaining, else while reading
+ const at=failed?(j&&j.rows&&j.rows.length?3:1):{queued:0,reading:1,confirm:1,confirmed:2,explaining:3,done:4}[st];
+ [...document.querySelectorAll('#steps li')].forEach((li,i)=>{li.className=at===4||i<at?'done':i===at?(failed?'fail':'now'):'';
+  li.querySelector('.ic').textContent=(at===4||i<at)?'✓':(failed&&i===at)?'✕':i+1})}
 function showConfirm(j){const c=document.getElementById('confirm');if(!c.hidden)return;c.hidden=false;
  c.innerHTML='<b>Does this match your report?</b><p class="muted">We read these numbers from your photo. Fix any that are wrong, then confirm.</p>'+
  '<label>Age <input id="age" type="number" value="'+esc(j.patient?.age??'')+'"></label> '+
@@ -83,7 +86,7 @@ async function tick(){
  let j;try{const r=await fetch('/api/jobs/'+id);j=await r.json();
   if(!r.ok){const e=document.getElementById('err');e.hidden=false;e.textContent=j.detail||'Not found';document.getElementById('progress').hidden=true;return}}
  catch(_){setTimeout(tick,3000);return}
- base=j.age_seconds;got=Date.now();last=j.status;steps(j.status);clock(j.status);
+ base=j.age_seconds;got=Date.now();last=j.status;steps(j.status,j);clock(j.status);
  const waiting=j.status==='queued'||j.status==='confirmed',b=document.getElementById('busy');
  b.hidden=!(waiting&&(j.worker==='offline'||j.age_seconds>90));
  if(!b.hidden)b.innerHTML=(j.worker==='offline'?'<b>Our explainer computer is busy right now.</b> ':'<b>It\'s taking longer than usual.</b> ')+
@@ -92,7 +95,9 @@ async function tick(){
  const c=document.getElementById('crit');c.hidden=!j.critical?.length;
  if(j.critical?.length)c.textContent='Please contact your doctor today about your '+j.critical.join(' and ')+'. A result is in the critical range.';
  if(j.status==='confirm')showConfirm(j);
- if(j.status==='error'){const e=document.getElementById('err');e.hidden=false;e.textContent='Sorry: '+(j.error||'something went wrong')+' You can try again from the start page.'}
+ if(j.status==='error'){const e=document.getElementById('err');e.hidden=false;e.textContent=(j.rows&&j.rows.length)?
+  'Sorry: we read your report, but something went wrong on our side while writing the explanation. Please try again in a few minutes from the start page.':
+  'Sorry: '+(j.error||'something went wrong')+' You can try again from the start page.'}
  if(j.text){const o=document.getElementById('out');o.hidden=false;o.innerHTML=render(j.text,j.critical||[])}
  if(j.status!=='done'&&j.status!=='error')setTimeout(tick,1500)}
 tick();
