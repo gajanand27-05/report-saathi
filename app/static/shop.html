@@ -1,0 +1,53 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Counter poster · Report Saathi</title>
+<style>
+:root{--bg:#fff;--fg:#1a1a1a;--muted:#5f6368;--card:#f4f6f8;--accent:#0b6e4f;--line:#dfe3e7}
+@media (prefers-color-scheme:dark){:root{--bg:#121417;--fg:#eceff1;--muted:#a0a7ad;--card:#1d2125;--accent:#4fc39a;--line:#2c3237}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.5 system-ui,sans-serif}
+main{max-width:620px;margin:auto;padding:20px 16px 32px}.muted{color:var(--muted)}a{color:var(--accent)}
+.tools{background:var(--card);border-radius:14px;padding:16px;margin:0 0 18px}
+.tools h1{font-size:1.25rem;margin:0 0 6px}
+.tools form{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.tools input{flex:1;min-width:180px;font-size:1rem;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
+.tools button{font-size:1rem;padding:10px 16px;border:0;border-radius:10px;background:var(--accent);color:#fff;font-weight:700;cursor:pointer}
+@media (prefers-color-scheme:dark){.tools button{color:#0b1a14}}
+/* the poster itself is always black on white, so it prints the same from any theme */
+.poster{background:#fff;color:#111;border:2px solid #111;border-radius:18px;padding:28px 24px;text-align:center}
+.poster .shop{font-size:1rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#0b6e4f;margin:0 0 6px}
+.poster h2{font-size:1.9rem;line-height:1.2;margin:0 0 6px}
+.poster .sub{font-size:1.15rem;margin:0 0 18px}
+.poster .qr svg{width:min(260px,70vw);height:auto;display:block;margin:0 auto}
+.poster ol{display:inline-block;text-align:left;margin:18px auto 8px;padding-left:1.3em;font-size:1.05rem}
+.poster ol li{margin:4px 0}
+.poster .small{font-size:.85rem;color:#444;margin:10px 0 0}
+.poster .url{font-size:.85rem;color:#444;overflow-wrap:anywhere;margin:8px 0 0}
+@media print{
+ @page{size:A4;margin:14mm}
+ body{background:#fff}.tools{display:none}main{max-width:none;padding:0}
+ .poster{border-width:3px;padding:44px 28px;min-height:262mm;display:flex;flex-direction:column;justify-content:center}
+ .poster .shop{font-size:1.3rem}.poster h2{font-size:3rem}.poster .sub{font-size:1.5rem}
+ .poster .qr svg{width:105mm;height:105mm}.poster ol{font-size:1.45rem}.poster .small{font-size:1rem}
+}
+</style></head><body><main>
+<div class="tools">
+ <h1>Counter poster for your pharmacy</h1>
+ <p class="muted" style="margin:0">Print this and put it near the counter. Customers scan the code and upload their lab report.
+ Reports from your shop are counted under <b>{{CODE_TEXT}}</b>{{COUNT}}.</p>
+ <form method="get" action="/shop"><input name="name" placeholder="Your shop's name" value="{{NAME_VALUE}}" maxlength="40" aria-label="Shop name"><button>Make poster</button></form>
+ <p style="margin:10px 0 0"><a href="#" onclick="print();return false" style="font-weight:600">Print the poster →</a></p>
+</div>
+<section class="poster">
+ {{SHOP_LINE}}
+ <h2>Got your lab report?</h2>
+ <p class="sub">Understand it in simple words, in about a minute.</p>
+ <div class="qr" role="img" aria-label="QR code that opens Report Saathi">{{QR}}</div>
+ <ol>
+  <li>Scan with your phone camera</li>
+  <li>Upload the PDF or a photo of your report</li>
+  <li>See what's worth asking your doctor about</li>
+ </ol>
+ <p class="small">Free. No account. Your report is deleted within 24 hours.<br>It explains your report. It is not a diagnosis. Please show your report to your doctor.</p>
+ <p class="url">{{URL}}</p>
+</section>
+</main></body></html>

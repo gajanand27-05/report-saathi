@@ -1,6 +1,7 @@
-import base64, html, json, os, pathlib, time
+import base64, html, json, os, pathlib, re, time
 from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
+import segno
 from lre.rules import evaluate
 from . import db as dbm
 
@@ -39,6 +40,28 @@ def example_page():
 def example_data():
     # a finished explanation of a SYNTHETIC report, served by the web app alone: works even when no worker is running
     return FileResponse(STATIC / "example.json", media_type="application/json")
+
+
+def shop_code(name: str) -> str:
+    """'Ravi Medicals, MG Road' -> 'ravi-medicals-mg-road' (the ?shop= code that counts uploads; max 40 like the jobs table)."""
+    return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:40]
+
+
+@app.get("/shop")
+def shop_poster(request: Request, name: str = ""):
+    # a printable counter poster: QR code -> the upload page with this shop's code, so its uploads are counted
+    name = name.strip()[:40]
+    code = shop_code(name)
+    proto = request.headers.get("x-forwarded-proto", request.url.scheme)
+    url = f"{proto}://{request.url.netloc}/" + (f"?shop={code}" if code else "")
+    qr = segno.make(url, error="m").svg_inline(scale=8, dark="#111111", light="#ffffff", border=2, omitsize=True)
+    count = f" ({DB.shop_count(code)} so far)" if code else ""
+    page = (STATIC / "shop.html").read_text(encoding="utf-8")
+    for k, v in {"{{QR}}": qr, "{{URL}}": html.escape(url), "{{NAME_VALUE}}": html.escape(name, quote=True),
+                 "{{CODE_TEXT}}": html.escape(code or "no shop yet: type your shop's name below"), "{{COUNT}}": count,
+                 "{{SHOP_LINE}}": f'<p class="shop">{html.escape(name)}</p>' if name else ""}.items():
+        page = page.replace(k, v)
+    return HTMLResponse(page)
 
 
 @app.get("/r/{jid}")

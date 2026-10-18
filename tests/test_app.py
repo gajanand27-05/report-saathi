@@ -109,3 +109,13 @@ def test_example_text_is_in_the_page_itself(client):
     ex = json.loads((pathlib.Path(__file__).parents[1] / "app/static/example.json").read_text(encoding="utf-8"))
     page = client.get("/example").text
     assert "Loading…" not in page and ex["text"].split("\n")[0][:40] in page and 'id="ex"' in page
+
+
+def test_shop_poster(client):
+    from app.main import shop_code
+    assert shop_code("Ravi Medicals, MG Road!") == "ravi-medicals-mg-road"
+    page = client.get("/shop", params={"name": "Ravi Medicals <b>"}).text
+    assert "<svg" in page and "?shop=ravi-medicals-b" in page and "Ravi Medicals &lt;b&gt;" in page and "<b>Ravi" not in page
+    client.post("/api/jobs", files={"file": ("r.pdf", b"%PDF x", "application/pdf")}, data={"pregnant": "no", "shop": "ravi-medicals-b"})
+    assert "(1 so far)" in client.get("/shop", params={"name": "Ravi Medicals <b>"}).text
+    assert "<svg" in client.get("/shop").text                                  # no name yet: plain link, still a poster
