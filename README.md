@@ -65,7 +65,7 @@ Measured on the team's DGX Spark, 17–18 October 2026. The raw outputs are in a
 | Values it made up | 1, caught by the PDF-text check | 0 |
 | Seconds per report (median) | **37** | 110 |
 
-The live app runs **one Gemma 4 12B for both jobs**: its own weights read the report and our LoRA (same vLLM server) writes the explanation. The 31B reads better and faster, but it was only ever the teacher, and one model leaves the shared GPU box room for other work. The cost: one low HDL read as normal (a misread printed range), and about two minutes per report.
+The live app runs **one Gemma 4 12B for both jobs**: its own weights read the report and our LoRA (same vLLM server) writes the explanation. The 31B reads better and faster, but it was only ever the teacher, and one model leaves the shared GPU box room for other work. The cost: one low HDL read as normal (a misread printed range), and 3–5 minutes for a full check-up (about one minute for a short report).
 
 **Explainer.** Test set: 36 cases × 2 runs = 72 answers. "Passes" = clears the automatic checks *and* a Gemma 4 31B judge.
 

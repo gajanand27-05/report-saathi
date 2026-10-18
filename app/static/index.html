@@ -52,7 +52,7 @@ const f=document.getElementById('f'),preg=document.getElementById('preg'),file=d
 preg.onchange=()=>{const y=preg.value==='yes';document.getElementById('wk').hidden=!y;document.getElementById('weeks').required=y};
 file.onchange=()=>{const n=file.files[0]?.name||'';document.getElementById('fname').textContent=n;document.getElementById('pick').classList.toggle('has',!!n)};
 fetch('/api/health').then(r=>r.json()).then(h=>{const el=document.getElementById('health');el.className=h.worker;
- el.innerHTML='<span class="dot"></span>'+(h.worker==='ready'?'Explainer is ready: about two minutes per report.':
+ el.innerHTML='<span class="dot"></span>'+(h.worker==='ready'?'Explainer is ready: about a minute for a short report, 3 to 5 minutes for a full check-up.':
   'Our explainer computer is busy right now. You can still upload: your report waits in the queue. Or <a href="/example">see an example</a>.')}).catch(()=>{});
 f.onsubmit=async e=>{e.preventDefault();const b=document.getElementById('go');b.disabled=true;b.textContent='Uploading…';
  const fd=new FormData(f);fd.append('shop',new URLSearchParams(location.search).get('shop')||'');
