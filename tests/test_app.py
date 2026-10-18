@@ -79,3 +79,33 @@ def test_file_kept_until_read_and_stuck_jobs_requeued(client):
     assert again["id"] == jid and again["file_b64"]
     client.post(f"/api/worker/{jid}/rows", headers=W, json={"patient": {"age": 30, "sex": "F"}, "rows": [], "lab_notes": [], "needs_confirm": False})
     assert db.get(jid)["file"] is None                                             # wiped once read
+
+
+def test_health_and_queue_position(client):
+    assert client.get("/api/health").json()["worker"] == "offline"          # no worker has polled yet
+    a = client.post("/api/jobs", files={"file": ("a.pdf", b"%PDF a", "application/pdf")}, data={"pregnant": "no"}).json()["id"]
+    b = client.post("/api/jobs", files={"file": ("b.pdf", b"%PDF b", "application/pdf")}, data={"pregnant": "no"}).json()["id"]
+    jb = client.get(f"/api/jobs/{b}").json()
+    assert jb["ahead"] == 1 and jb["worker"] == "offline" and jb["age_seconds"] >= 0
+    client.get("/api/worker/next", headers=W)                                # the worker polls (and takes job a)
+    assert client.get("/api/health").json()["worker"] == "ready"
+    assert client.get(f"/api/jobs/{b}").json()["ahead"] == 0
+
+
+def test_critical_banner_comes_from_the_rules(client):
+    jid = client.post("/api/jobs", files={"file": ("c.pdf", b"%PDF c", "application/pdf")}, data={"pregnant": "yes", "weeks": "32"}).json()["id"]
+    client.get("/api/worker/next", headers=W)
+    rows = [{"test": "Hemoglobin", "value": "6.2", "unit": "g/dL", "ranges": [{"label": "", "text": "12.0-15.0"}]},
+            {"test": "TSH", "value": "2.1", "unit": "uIU/mL", "ranges": [{"label": "", "text": "0.27-4.2"}]}]
+    assert client.get(f"/api/jobs/{jid}").json()["critical"] == []          # not read yet
+    client.post(f"/api/worker/{jid}/rows", headers=W, json={"patient": {"age": 27, "sex": "F"}, "rows": rows, "lab_notes": [], "needs_confirm": False})
+    # the model's text never mentions it, yet the page still knows: the flag comes from rules.py
+    client.post(f"/api/worker/{jid}/text", headers=W, json={"text": "Overview: one value."})
+    assert client.get(f"/api/jobs/{jid}").json()["critical"] == ["Haemoglobin"]
+
+
+def test_example_text_is_in_the_page_itself(client):
+    import json, pathlib
+    ex = json.loads((pathlib.Path(__file__).parents[1] / "app/static/example.json").read_text(encoding="utf-8"))
+    page = client.get("/example").text
+    assert "Loading…" not in page and ex["text"].split("\n")[0][:40] in page and 'id="ex"' in page

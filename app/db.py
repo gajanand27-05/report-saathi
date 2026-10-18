@@ -79,6 +79,11 @@ class Db:
     def delete_older_than(self, seconds):
         return self.execute("DELETE FROM jobs WHERE created_at < ?", (time.time() - seconds,)).rowcount
 
+    def ahead(self, created_at):
+        """How many waiting jobs were uploaded before this one."""
+        r = self.one("SELECT COUNT(*) AS n FROM jobs WHERE status IN ('queued','confirmed') AND created_at < ?", (created_at,))
+        return r["n"] if r else 0
+
     def shop_count(self, shop):
         r = self.one("SELECT n FROM shop_counts WHERE shop = ?", (shop,))
         return r["n"] if r else 0

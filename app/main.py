@@ -1,6 +1,7 @@
-import base64, os, pathlib, time
+import base64, html, json, os, pathlib, time
 from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
+from lre.rules import evaluate
 from . import db as dbm
 
 MAX = 10 * 1024 * 1024
@@ -8,6 +9,8 @@ STATIC = pathlib.Path(__file__).with_name("static")
 app = FastAPI(docs_url=None, redoc_url=None)
 DB = dbm.connect(os.environ.get("DATABASE_URL", "sqlite:///local.db"))
 TOKEN = os.environ.get("WORKER_TOKEN", "")
+WORKER_ONLINE_S = 30  # the worker polls every ~2 s; silent for longer than this = the GPU box is busy or off
+_worker_seen = 0.0
 
 
 def kind(data: bytes):
@@ -23,7 +26,13 @@ def index():
 
 @app.get("/example")
 def example_page():
-    return FileResponse(STATIC / "example.html")
+    # the saved example is written into the page itself, so the explanation shows even before (or without) any script
+    ex = (STATIC / "example.json").read_text(encoding="utf-8")
+    text = html.escape(json.loads(ex)["text"])
+    page = (STATIC / "example.html").read_text(encoding="utf-8")
+    page = page.replace('<div id="out">Loading…</div>', f'<div id="out" style="white-space:pre-line">{text}</div>')
+    page = page.replace("<!--EXAMPLE_DATA-->", '<script id="ex" type="application/json">' + ex.replace("</", "<\\/") + "</script>")
+    return HTMLResponse(page)
 
 
 @app.get("/api/example")
@@ -49,8 +58,30 @@ async def create(file: UploadFile = File(...), pregnant: str = Form(...), weeks:
     return {"id": DB.create_job(shop.strip()[:40] or None, file.filename, data, p, w)}
 
 
+def worker_state():
+    ago = time.time() - _worker_seen
+    return {"worker": "ready" if ago < WORKER_ONLINE_S else "offline",
+            "seen_seconds_ago": int(ago) if _worker_seen else None}
+
+
+def critical_tests(j):
+    """Tests the RULES flag Critical (never the model's text), so the page can show the urgent banner first."""
+    if not j.get("rows") or j.get("status") in ("queued", "reading", "confirm"):
+        return []
+    try:
+        preg = {"yes": True, "no": False}.get(j.get("pregnant"))
+        inp = evaluate(j["rows"], dict(j.get("patient") or {}, pregnant=preg, weeks=j.get("weeks")), j.get("lab_notes") or [])
+        return [r["test"] for r in inp["rows"] if r["flag"].startswith("Critical")]
+    except Exception:
+        return []
+
+
 def public(j):
-    return {k: j.get(k) for k in ("status", "patient", "rows", "text", "error")}
+    out = {k: j.get(k) for k in ("status", "patient", "rows", "text", "error")}
+    out["age_seconds"] = int(time.time() - j["created_at"])
+    out["ahead"] = DB.ahead(j["created_at"]) if j["status"] in ("queued", "confirmed") else 0
+    out["critical"] = critical_tests(j)
+    return out | worker_state()
 
 
 @app.get("/api/jobs/{jid}")
@@ -71,6 +102,11 @@ async def confirm(jid: str, req: Request):
     return {"ok": True}
 
 
+@app.get("/api/health")
+def health():
+    return worker_state()
+
+
 @app.get("/api/stats")
 def stats(shop: str):
     return {"shop": shop, "reports": DB.shop_count(shop)}
@@ -88,8 +124,10 @@ def cleanup_if_due(every=600):
 
 
 def auth(h):
+    global _worker_seen
     if not TOKEN or h != f"Bearer {TOKEN}":
         raise HTTPException(401, "bad token")
+    _worker_seen = time.time()
 
 
 @app.get("/api/worker/next")

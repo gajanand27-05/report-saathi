@@ -1,36 +1,62 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Report Saathi: understand your lab report</title>
 <style>
-:root{--bg:#fff;--fg:#1a1a1a;--muted:#5f6368;--card:#f4f6f8;--accent:#0b6e4f}
-@media (prefers-color-scheme:dark){:root{--bg:#121417;--fg:#eceff1;--muted:#a0a7ad;--card:#1d2125;--accent:#4fc39a}}
+:root{--bg:#fff;--fg:#1a1a1a;--muted:#5f6368;--card:#f4f6f8;--accent:#0b6e4f;--line:#cfd6dc;--ok:#0b6e4f;--warn:#9a5b00}
+@media (prefers-color-scheme:dark){:root{--bg:#121417;--fg:#eceff1;--muted:#a0a7ad;--card:#1d2125;--accent:#4fc39a;--line:#3a4147;--ok:#4fc39a;--warn:#f0b35a}}
+*{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.5 system-ui,sans-serif}
-main{max-width:560px;margin:auto;padding:20px 16px}
-h1{font-size:1.5rem;margin:.2em 0}.muted{color:var(--muted)}
+main{max-width:560px;margin:auto;padding:20px 16px 32px}
+h1{font-size:1.6rem;margin:.1em 0 0}.muted{color:var(--muted)}a{color:var(--accent)}
+.lead{font-size:1.1rem;margin:4px 0 14px}
+ul.get{margin:0 0 14px;padding-left:1.2em}ul.get li{margin:3px 0}
 .card{background:var(--card);border-radius:14px;padding:16px;margin:14px 0}
-label{display:block;margin:10px 0 6px;font-weight:600}
-input[type=file],select,input[type=number]{width:100%;font-size:1rem;padding:10px;border-radius:10px;border:1px solid var(--muted);background:var(--bg);color:var(--fg);box-sizing:border-box}
-button{width:100%;font-size:1.1rem;padding:14px;border:0;border-radius:12px;background:var(--accent);color:#fff;font-weight:700;margin-top:16px}
-#err{color:#c62828}
+.pick{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:120px;padding:16px;text-align:center;
+ border:2px dashed var(--line);border-radius:12px;cursor:pointer;background:var(--bg)}
+.pick:focus-within{outline:3px solid var(--accent);outline-offset:2px}
+.pick b{font-size:1.1rem}.pick .file{font-weight:600;color:var(--accent);overflow-wrap:anywhere}
+.pick.has{border-style:solid;border-color:var(--accent)}
+.pick input{position:absolute;width:1px;height:1px;opacity:0}
+label.q{display:block;margin:14px 0 6px;font-weight:600}
+select,input[type=number]{width:100%;font-size:1rem;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
+button{width:100%;font-size:1.1rem;padding:14px;border:0;border-radius:12px;background:var(--accent);color:#fff;font-weight:700;margin-top:16px;cursor:pointer}
+@media (prefers-color-scheme:dark){button{color:#0b1a14}}
+button:disabled{opacity:.6}
+.privacy{font-size:.9rem;margin:10px 0 0}
+#err{color:#c62828;margin:8px 0 0}
+#health{font-size:.92rem;margin:0 0 4px;min-height:1.4em}
+.dot{display:inline-block;width:.6em;height:.6em;border-radius:50%;margin-right:6px;vertical-align:middle;background:var(--muted)}
+.ready .dot{background:var(--ok)}.offline .dot{background:var(--warn)}
 </style></head><body><main>
 <h1>Report Saathi</h1>
-<p style="margin:0 0 8px;font-size:1.1rem">Understand your lab report</p>
-<p class="muted">Upload the PDF from the lab, or a clear photo. We mark what's worth asking your doctor about, in simple words. It is not a diagnosis.</p>
-<p><a href="/example" style="color:var(--accent);font-weight:600">See an example first →</a></p>
+<p class="lead">Your lab report, explained in simple words.</p>
+<ul class="get">
+ <li>Which values are <b>worth asking your doctor about</b>, and what each test measures</li>
+ <li>Small differences grouped together, so you're not alarmed by every line</li>
+ <li>Questions to take to your doctor. It never diagnoses and never suggests medicines</li>
+</ul>
+<p><a href="/example" style="font-weight:600">See an example first →</a></p>
+<p id="health" class="muted"></p>
 <form id="f" class="card">
-  <label for="file">Upload report (PDF or photo)</label>
-  <input id="file" name="file" type="file" accept="application/pdf,image/*" required>
-  <label for="preg">Are you pregnant?</label>
+  <label class="pick" id="pick"><input id="file" name="file" type="file" accept="application/pdf,image/*" required>
+   <b>Tap to choose your report</b><span class="muted">The PDF from the lab, or a clear photo</span><span class="file" id="fname"></span></label>
+  <p class="privacy muted">No account needed. Your report is read on our own computer, not by any AI company, and deleted within 24 hours.</p>
+  <label class="q" for="preg">Are you pregnant?</label>
   <select id="preg" name="pregnant"><option value="no">No</option><option value="yes">Yes</option><option value="unsure">Not sure</option></select>
-  <div id="wk" hidden><label for="weeks">How many weeks?</label><input id="weeks" name="weeks" type="number" min="1" max="42"></div>
-  <button id="go">Explain my report</button><p id="err"></p>
+  <div id="wk" hidden><label class="q" for="weeks">How many weeks pregnant?</label><input id="weeks" name="weeks" type="number" min="1" max="42" inputmode="numeric">
+   <p class="muted" style="font-size:.9rem;margin:6px 0 0">Normal ranges change in each trimester, so this matters.</p></div>
+  <button id="go">Explain my report</button><p id="err" role="alert"></p>
 </form>
-<p class="muted">Your report is processed on our own computer, not by any AI company, and deleted within 24 hours.</p>
 </main><script>
-const f=document.getElementById('f'),preg=document.getElementById('preg');
-preg.onchange=()=>document.getElementById('wk').hidden=preg.value!=='yes';
+const f=document.getElementById('f'),preg=document.getElementById('preg'),file=document.getElementById('file');
+preg.onchange=()=>{const y=preg.value==='yes';document.getElementById('wk').hidden=!y;document.getElementById('weeks').required=y};
+file.onchange=()=>{const n=file.files[0]?.name||'';document.getElementById('fname').textContent=n;document.getElementById('pick').classList.toggle('has',!!n)};
+fetch('/api/health').then(r=>r.json()).then(h=>{const el=document.getElementById('health');el.className=h.worker;
+ el.innerHTML='<span class="dot"></span>'+(h.worker==='ready'?'Explainer is ready: about a minute per report.':
+  'Our explainer computer is busy right now. You can still upload: your report waits in the queue. Or <a href="/example">see an example</a>.')}).catch(()=>{});
 f.onsubmit=async e=>{e.preventDefault();const b=document.getElementById('go');b.disabled=true;b.textContent='Uploading…';
  const fd=new FormData(f);fd.append('shop',new URLSearchParams(location.search).get('shop')||'');
- const r=await fetch('/api/jobs',{method:'POST',body:fd});
- if(!r.ok){document.getElementById('err').textContent=(await r.json()).detail||'Upload failed';b.disabled=false;b.textContent='Explain my report';return}
- location.href='/r/'+(await r.json()).id};
+ try{const r=await fetch('/api/jobs',{method:'POST',body:fd});
+  if(!r.ok)throw new Error((await r.json()).detail||'Upload failed');
+  location.href='/r/'+(await r.json()).id}
+ catch(x){document.getElementById('err').textContent=x.message||'Upload failed. Please try again.';b.disabled=false;b.textContent='Explain my report'}};
 </script></body></html>

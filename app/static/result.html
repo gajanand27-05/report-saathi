@@ -1,43 +1,99 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Your report explained · Report Saathi</title>
 <style>
-:root{--bg:#fff;--fg:#1a1a1a;--muted:#5f6368;--card:#f4f6f8;--accent:#0b6e4f}
-@media (prefers-color-scheme:dark){:root{--bg:#121417;--fg:#eceff1;--muted:#a0a7ad;--card:#1d2125;--accent:#4fc39a}}
+:root{--bg:#fff;--fg:#1a1a1a;--muted:#5f6368;--card:#f4f6f8;--accent:#0b6e4f;--line:#dfe3e7;--warn:#9a5b00;--warnbg:#fff4e0;
+ --danger:#8c1d18;--dangerbg:#fdecea;--dangerline:#b3261e}
+@media (prefers-color-scheme:dark){:root{--bg:#121417;--fg:#eceff1;--muted:#a0a7ad;--card:#1d2125;--accent:#4fc39a;--line:#2c3237;--warn:#f0b35a;--warnbg:#2e2412;
+ --danger:#ffdad6;--dangerbg:#3b1412;--dangerline:#ffb4ab}}
+*{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.6 system-ui,sans-serif}
-main{max-width:560px;margin:auto;padding:20px 16px}.muted{color:var(--muted)}
+main{max-width:560px;margin:auto;padding:20px 16px 32px}.muted{color:var(--muted)}a{color:var(--accent)}
+h1{font-size:1.4rem;margin:.1em 0 .6em}
 .card{background:var(--card);border-radius:14px;padding:16px;margin:14px 0;overflow-wrap:anywhere}
-table{width:100%;border-collapse:collapse}td{padding:4px}td input{width:100%;font-size:1rem;padding:6px;box-sizing:border-box}
+ol.steps{list-style:none;margin:0;padding:0}
+ol.steps li{display:flex;align-items:center;gap:10px;padding:5px 0;color:var(--muted)}
+ol.steps .ic{flex:none;width:1.5em;height:1.5em;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-size:.8rem;font-weight:700}
+ol.steps li.done{color:var(--fg)}ol.steps li.done .ic{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+ol.steps li.now{color:var(--fg);font-weight:600}ol.steps li.now .ic{border-color:var(--accent);animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 5px color-mix(in srgb,var(--accent) 25%,transparent)}}
+@media (prefers-reduced-motion:reduce){ol.steps li.now .ic{animation:none}}
+#timer{font-variant-numeric:tabular-nums;font-size:.92rem;margin:6px 0 0}
+.busy{background:var(--warnbg);border-left:4px solid var(--warn);border-radius:10px;padding:12px 14px;margin:14px 0;font-size:.95rem}
+.crit{background:var(--dangerbg);color:var(--danger);border:2px solid var(--dangerline);border-radius:12px;padding:12px 14px;margin:14px 0;font-weight:700}
+.sec{margin:0 0 14px}.sec:last-child{margin-bottom:0}
+.sec h2{font-size:1rem;margin:0 0 4px}
+.worth{border-left:4px solid var(--accent);padding-left:12px}
+.qs{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.sec ul{margin:4px 0 0;padding-left:1.2em}.sec li{margin:4px 0}
+.disc{font-size:.9rem;color:var(--muted);border-top:1px solid var(--line);padding-top:10px;margin-top:4px}
+table{width:100%;border-collapse:collapse}td{padding:4px}td input{width:100%;font-size:1rem;padding:6px}
 button{width:100%;font-size:1.1rem;padding:14px;border:0;border-radius:12px;background:var(--accent);color:#fff;font-weight:700;margin-top:12px}
-h2{font-size:1.1rem;margin:1em 0 .3em}
+@media (prefers-color-scheme:dark){button{color:#0b1a14}}
 </style></head><body><main>
-<h1 style="font-size:1.4rem">Your report explained</h1>
-<p id="state" class="muted">In queue…</p>
+<h1>Your report explained</h1>
+<div class="card" id="progress">
+ <ol class="steps" id="steps">
+  <li><span class="ic">1</span>In the queue</li>
+  <li><span class="ic">2</span>Reading your report</li>
+  <li><span class="ic">3</span>Checking each value against the rules</li>
+  <li><span class="ic">4</span>Writing your explanation</li>
+ </ol>
+ <p id="timer" class="muted"></p>
+</div>
+<div id="busy" class="busy" hidden></div>
+<div id="crit" class="crit" role="alert" hidden></div>
 <div id="confirm" class="card" hidden></div>
-<div id="out" class="card" hidden></div>
-<p class="muted">Results are deleted after 24 hours. Save or screenshot this page if you need it.</p>
+<div id="out" class="card" hidden aria-live="polite"></div>
+<p id="err" class="busy" hidden></p>
+<p class="muted" style="font-size:.9rem">This page has its own link: you can close it and come back. Results are deleted after 24 hours, so save or screenshot it if you need it. <a href="/">Explain another report</a></p>
 </main><script>
-const id=location.pathname.split('/').pop(),t0=Date.now();
-const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-function md(s){return esc(s).split('\n').map(l=>/^#+\s/.test(l)?'<h2>'+l.replace(/^#+\s/,'')+'</h2>':
- /^\s*[-*]\s/.test(l)?'• '+l.replace(/^\s*[-*]\s/,'')+'<br>':l+'<br>').join('').replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')}
+const id=location.pathname.split('/').pop();let base=0,got=0;
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const HEAD=/^(Overview|Worth asking about|Small differences|Normal|Notes|Questions to ask your doctor)\s*:?\s*(.*)$/i;
+function render(text,crit){
+ const secs=[];let cur={k:'',lines:[]},disc='';
+ for(const raw of text.split('\n')){const l=raw.replace(/\*\*/g,'').trim();if(!l)continue;
+  const m=l.match(HEAD);if(m){cur={k:m[1].toLowerCase(),lines:m[2]?[m[2]]:[]};secs.push(cur);continue}
+  if(/not a diagnosis/i.test(l)){disc=l;continue}
+  if(crit.length&&/doctor today/i.test(l))continue;  // shown in the red banner at the top instead
+  if(!secs.length)secs.push(cur);cur.lines.push(l)}
+ const body=ls=>{const b=ls.filter(x=>/^[-*•]\s|^\d+\.\s/.test(x)),p=ls.filter(x=>!/^[-*•]\s|^\d+\.\s/.test(x));
+  return p.map(x=>'<p style="margin:0 0 6px">'+esc(x)+'</p>').join('')+(b.length?'<ul>'+b.map(x=>'<li>'+esc(x.replace(/^([-*•]|\d+\.)\s/,''))+'</li>').join('')+'</ul>':'')};
+ const title={overview:'',"worth asking about":'Worth asking your doctor about',"small differences":'Small differences',normal:'Normal',notes:'Notes',"questions to ask your doctor":'Questions to ask your doctor'};
+ return secs.map(s=>'<div class="sec'+(s.k==='worth asking about'?' worth':'')+(s.k.startsWith('questions')?' qs':'')+'">'+
+   (title[s.k]?'<h2>'+title[s.k]+'</h2>':'')+body(s.lines)+'</div>').join('')+(disc?'<p class="disc">'+esc(disc)+'</p>':'')}
+function steps(st){const at={queued:0,reading:1,confirm:1,confirmed:2,explaining:3,done:4,error:-1}[st];
+ [...document.querySelectorAll('#steps li')].forEach((li,i)=>{li.className=at===4||i<at?'done':i===at?'now':'';
+  li.querySelector('.ic').textContent=(at===4||i<at)?'✓':i+1})}
 function showConfirm(j){const c=document.getElementById('confirm');if(!c.hidden)return;c.hidden=false;
- c.innerHTML='<b>Does this match your report?</b><p class="muted">Fix any number that is wrong, then confirm.</p>'+
- '<label>Age <input id="age" type="number" value="'+(j.patient?.age??'')+'"></label> '+
+ c.innerHTML='<b>Does this match your report?</b><p class="muted">We read these numbers from your photo. Fix any that are wrong, then confirm.</p>'+
+ '<label>Age <input id="age" type="number" value="'+esc(j.patient?.age??'')+'"></label> '+
  '<label>Sex <select id="sex"><option>F</option><option>M</option></select></label><table>'+
- j.rows.map((r,i)=>'<tr><td>'+esc(r.test)+'</td><td><input data-i="'+i+'" value="'+esc(String(r.value??''))+'"></td><td>'+esc(r.unit||'')+'</td></tr>').join('')+
+ j.rows.map((r,i)=>'<tr><td>'+esc(r.test)+'</td><td><input data-i="'+i+'" value="'+esc(r.value??'')+'"></td><td>'+esc(r.unit||'')+'</td></tr>').join('')+
  '</table><button id="ok">Yes, explain it</button>';
  if(j.patient?.sex)document.getElementById('sex').value=j.patient.sex;
  document.getElementById('ok').onclick=async()=>{const rows=j.rows.map((r,i)=>({...r,value:document.querySelector('[data-i="'+i+'"]').value}));
   await fetch('/api/jobs/'+id+'/confirm',{method:'POST',headers:{'Content-Type':'application/json'},
    body:JSON.stringify({patient:{age:+document.getElementById('age').value||null,sex:document.getElementById('sex').value},rows})});
   c.hidden=true;c.innerHTML=''}}
-async function tick(){const r=await fetch('/api/jobs/'+id);const st=document.getElementById('state');
- if(!r.ok){st.textContent=(await r.json()).detail;return}
- const j=await r.json(),slow=Date.now()-t0>180000;
- st.textContent={queued:'In queue…',reading:'Reading your report…',confirm:'Please check the numbers below.',confirmed:'Thanks, starting…',
-  explaining:'Writing your explanation…',done:'',error:'Sorry: '+(j.error||'something went wrong')}[j.status]+(slow&&j.status!=='done'?' Taking longer than usual, please keep this page open.':'');
+function clock(st){const s=base+Math.round((Date.now()-got)/1000),t=s<60?s+' s':Math.floor(s/60)+' min '+(s%60)+' s';
+ document.getElementById('timer').textContent=st==='done'?'Done in '+t+'.':'Uploaded '+t+' ago.'}
+let last='queued';setInterval(()=>{if(got&&last!=='done'&&last!=='error')clock(last)},1000);
+async function tick(){
+ let j;try{const r=await fetch('/api/jobs/'+id);j=await r.json();
+  if(!r.ok){const e=document.getElementById('err');e.hidden=false;e.textContent=j.detail||'Not found';document.getElementById('progress').hidden=true;return}}
+ catch(_){setTimeout(tick,3000);return}
+ base=j.age_seconds;got=Date.now();last=j.status;steps(j.status);clock(j.status);
+ const waiting=j.status==='queued'||j.status==='confirmed',b=document.getElementById('busy');
+ b.hidden=!(waiting&&(j.worker==='offline'||j.age_seconds>90));
+ if(!b.hidden)b.innerHTML=(j.worker==='offline'?'<b>Our explainer computer is busy right now.</b> ':'<b>It\'s taking longer than usual.</b> ')+
+  'Your report is saved in the queue'+(j.ahead?' ('+j.ahead+' ahead of you)':'')+'. Keep this page open and it will continue by itself, or come back to this link later. '+
+  'If it hasn\'t started '+(j.age_seconds>600?'after 10 minutes, it may be a while today: ':'within 10 minutes, ')+'<a href="/example">see a finished example</a> meanwhile.';
+ const c=document.getElementById('crit');c.hidden=!j.critical?.length;
+ if(j.critical?.length)c.textContent='Please contact your doctor today about your '+j.critical.join(' and ')+'. A result is in the critical range.';
  if(j.status==='confirm')showConfirm(j);
- if(j.text){const o=document.getElementById('out');o.hidden=false;o.innerHTML=md(j.text)}
+ if(j.status==='error'){const e=document.getElementById('err');e.hidden=false;e.textContent='Sorry: '+(j.error||'something went wrong')+' You can try again from the start page.'}
+ if(j.text){const o=document.getElementById('out');o.hidden=false;o.innerHTML=render(j.text,j.critical||[])}
  if(j.status!=='done'&&j.status!=='error')setTimeout(tick,1500)}
 tick();
 </script></body></html>

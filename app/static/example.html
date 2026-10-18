@@ -22,19 +22,20 @@ a.btn{display:block;text-align:center;font-size:1.1rem;padding:14px;border-radiu
 <div class="card"><h2>3 · The explanation</h2><div id="out">Loading…</div><p id="by" class="note"></p></div>
 <a class="btn" href="/">Explain my own report</a>
 <p class="muted">Report Saathi never diagnoses and never suggests medicines. Please show your report to your doctor.</p>
-</main><script>
+</main><!--EXAMPLE_DATA--><script>
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function md(s){return esc(s).split('\n').map(l=>/^\s*[-*]\s/.test(l)?'• '+l.replace(/^\s*[-*]\s/,'')+'<br>':
  l.replace(/^(Overview|Worth asking about|Small differences|Normal|Notes|Questions to ask your doctor):/,'<b>$1:</b>')+'<br>').join('')
  .replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')}
-fetch('/api/example').then(r=>r.json()).then(e=>{
+const embedded=document.getElementById('ex');
+(embedded?Promise.resolve(JSON.parse(embedded.textContent)):fetch('/api/example').then(r=>r.json())).then(e=>{
  const p=e.patient;
  document.getElementById('who').textContent=p.age+' years, '+(p.sex==='F'?'female':'male')+(p.pregnant?', pregnant ('+p.weeks+' weeks, as she told the app)':', not pregnant')+'.';
  document.getElementById('rows').innerHTML=e.rows.map(r=>'<div class="row"><div class="top"><b>'+esc(r.test)+'</b><span>'+
    esc(r.value??'')+' '+esc(r.unit||'')+' · <b class="flag">'+esc(r.flag)+'</b></span></div>'+
    '<div class="note">Range used: '+esc(r.range_used||'')+(r.range_label?' ('+esc(r.range_label)+')':'')+'</div>'+
    (r.note?'<div class="note">Note: '+esc(r.note)+'</div>':'')+'</div>').join('');
- document.getElementById('out').innerHTML=md(e.text);
+ const o=document.getElementById('out');o.style.whiteSpace='normal';o.innerHTML=md(e.text);
  document.getElementById('by').textContent='Written by '+e.model+'. In the app, this text streams in as the model writes it.';
 }).catch(()=>{document.getElementById('out').textContent='Could not load the example.'});
 </script></body></html>
