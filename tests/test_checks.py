@@ -60,3 +60,42 @@ def test_all_normal_report_has_no_questions_section():
     inp = dict(INP, rows=[row])
     assert "questions to ask" in derive_checks(inp)["must_not"]
     assert "questions to ask" not in derive_checks(INP)["must_not"]
+
+
+def _row(test, value, flag, imp=1):
+    return {"test": test, "value": value, "unit": "", "range_used": "", "range_label": "lab range",
+            "flag": flag, "importance": imp, "note": None}
+
+
+DISC = "\nThis explains your report. It is not a diagnosis. Please show this report to your doctor."
+
+
+def test_v14_input_checks():
+    # one abnormal test, no normal rows, no lab notes: "all other tests normal" and "the lab's note says" are invented
+    inp = dict(INP)
+    case = {"input": inp, "checks": derive_checks(inp)}
+    text = "Overview: 1 value. TSH is 8.71, high. All other tests are normal. The lab's note says it is fine.\nQuestions: ok?" + DISC
+    fails = auto_checks(case, text)[0]
+    assert "invented 'all other tests normal'" in fails and "quotes lab notes that don't exist" in fails
+    # made-up harmless cause
+    fails = auto_checks(case, "TSH is 8.71, high. This can depend on how the sample was handled.\nQuestions: ok?" + DISC)[0]
+    assert any("sample was handled" in f for f in fails)
+    # HbA1c is a 3-month average: a meal or the time of day is a wrong reason
+    hb = {"patient": INP["patient"], "rows": [_row("HbA1c (3-month average sugar)", 6.1, "Borderline high")], "lab_notes": []}
+    fails = auto_checks({"input": hb, "checks": derive_checks(hb)}, "HbA1c is 6.1, borderline high, maybe after a recent meal.\nQuestions: ok?" + DISC)[0]
+    assert "wrong reason for HbA1c: recent meal" in fails
+
+
+def test_v14_critical_line_first():
+    inp = {"patient": INP["patient"], "rows": [_row("Haemoglobin", 6.2, "Critical low")], "lab_notes": []}
+    case = {"input": inp, "checks": derive_checks(inp)}
+    late = "Overview: 1 value.\nWorth asking about: Haemoglobin is 6.2, critically low.\nPlease contact your doctor today about your Haemoglobin.\nQuestions: ok?" + DISC
+    first = "Overview: 1 value.\nPlease contact your doctor today about your Haemoglobin.\nWorth asking about: Haemoglobin is 6.2, critically low.\nQuestions: ok?" + DISC
+    assert "critical line not right after the overview" in auto_checks(case, late)[0]
+    assert auto_checks(case, first)[0] == []
+
+
+def test_prompt_v14_rules_present():
+    for s in ("HbA1c shows the average sugar", "give NO reassuring reason", "Never write \"all other tests are normal\"",
+              "never mention the lab's notes", "very next line after the Overview", "WITH its unit"):
+        assert s in SYSTEM_PROMPT

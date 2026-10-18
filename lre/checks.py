@@ -47,7 +47,28 @@ DEFAULT_MUST_NOT = [
     r"importance[- ]?\d", r"range_label", r"range_used",
     # filler instead of reasons: "...can happen for several general health reasons." (nothing named after it)
     r"(?:various|several|a few|many|different) (?:general |common |different |everyday )?(?:health )?(?:reasons|factors)\s*\.",
+    # a made-up harmless cause (prompt v1.2's example list taught both models to blame these for everything)
+    r"how the sample was (?:handled|collected|taken|stored|processed)", r"sample handling",
 ]
+
+
+def input_checks(inp, text):
+    """Checks that depend on the input rather than on a fixed word list (prompt v1.4)."""
+    fails, rows = [], inp["rows"]
+    if not any(r["flag"] == "Normal" for r in rows) and re.search(
+            r"all (?:the )?(?:other |rest of (?:the|your) )?(?:tests|values|results)\b[^.\n]{0,30}\bnormal", text, re.I):
+        fails.append("invented 'all other tests normal'")
+    if not inp.get("lab_notes") and re.search(r"the lab'?s? notes? (?:says|said|mentions)", text, re.I):
+        fails.append("quotes lab notes that don't exist")
+    if any("hba1c" in r["test"].lower() and r["importance"] == 1 and r["flag"] in ABNORMAL for r in rows):
+        m = re.search(r"recent meal|time of day|not fasting|what you ate", text, re.I)
+        if m:
+            fails.append(f"wrong reason for HbA1c: {m.group(0)}")
+    crit = re.search(r"doctor today|today[^.\n]{0,40}doctor", text, re.I)
+    worth = re.search(r"worth asking about\s*:", text, re.I)
+    if any(r["flag"].startswith("Critical") for r in rows) and crit and worth and crit.start() > worth.start():
+        fails.append("critical line not right after the overview")
+    return fails
 
 
 def has(text, term):
@@ -72,6 +93,7 @@ def auto_checks(case, text):
         m = re.search(r"(?<![a-z])" + pat, text, re.I)
         if m:
             fails.append(f"forbidden: {m.group(0)}")
+    fails += input_checks(inp, text)
     crit_line = re.search(r"doctor today|today[^.\n]{0,40}doctor", text, re.I)
     if c["critical"] and not crit_line:
         fails.append("missing critical 'contact your doctor today' line")

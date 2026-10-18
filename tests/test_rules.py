@@ -69,7 +69,9 @@ def test_ogtt_pregnant_section():
 
 def test_platelet_unit_typo_fixed_with_note():
     r = one(row("Platelet Count", "368", "lakhs/cmm", ("", "150-450")), P())
-    assert (r["value"], r["flag"], r["note"]) == (3.68, "Normal", TYPO_NOTE)
+    assert (r["value"], r["flag"]) == (3.68, "Normal")
+    assert r["note"] == TYPO_NOTE.format(printed="368", value=3.68)
+    assert "368 thousand/cmm" in r["note"] and "3.68 lakh/cmm" in r["note"]
 
 def test_impossible_value_is_unread():
     r = one(row("Hemoglobin", "84", "g/dL", ("", "12-15")), P())

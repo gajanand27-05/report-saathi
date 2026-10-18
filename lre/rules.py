@@ -5,8 +5,10 @@ from pathlib import Path
 
 from .ranges import Interval, classify_label, parse_interval, split_range
 
-TYPO_NOTE = ("the lab printed the unit as 'lakhs/cmm', which must be a printing mistake; "
-             "read as thousand/cmm")
+# The lab prints e.g. "373 lakhs/cmm" for 373 thousand/cmm. The value we pass on is in lakh (3.73), so the note
+# must say both numbers: "read as thousand" next to 3.73 would mean 3,730, a dangerously low count.
+TYPO_NOTE = ("the lab printed {printed} 'lakhs/cmm', which is a printing mistake: it means {printed} thousand/cmm, "
+             "which is the same as {value} lakh/cmm")
 FLAGS = ("Normal", "Low", "High", "Borderline high", "Borderline low", "Critical low", "Critical high",
          "Positive", "Negative", "Abnormal", "Not reported", "Unread")
 NOT_REPORTED = {"n/r", "nr", "not reported", "-", "--", ""}
@@ -312,8 +314,9 @@ def evaluate(raw_rows: list, patient: dict, lab_notes=()) -> dict:
         kind, payload, label = _choose(rule, raw.get("ranges", []), patient)
         if rule.alt_scale and rule.max_possible is not None and v > rule.max_possible \
                 and rule.min_possible <= v / rule.alt_scale <= rule.max_possible and "lakh" in unit.lower():
+            printed = raw.get("value")
             v = round(v / rule.alt_scale, 4)
-            row.update(value=v, unit=rule.unit, note=TYPO_NOTE)
+            row.update(value=v, unit=rule.unit, note=TYPO_NOTE.format(printed=printed, value=v))
             if kind == "interval" and payload.lo is not None and payload.lo > rule.max_possible:
                 payload = payload.scaled(1 / rule.alt_scale)
         if (rule.min_possible is not None and v < rule.min_possible) or (rule.max_possible is not None and v > rule.max_possible):
