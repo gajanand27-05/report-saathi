@@ -58,14 +58,14 @@ Measured on the team's DGX Spark, 17–18 October 2026. The raw outputs are in a
 
 **Reader** (27 real reports with names removed, 969 rows; used only for testing):
 
-| | Gemma 4 31B | Gemma 4 12B |
+| | Gemma 4 31B | Gemma 4 12B (live) |
 |---|---|---|
 | High/low flags the user sees | **960 / 960** | 958 / 960 (one low HDL read as normal) |
 | Values exactly right | 963 / 969 | 966 / 969 |
 | Values it made up | 1, caught by the PDF-text check | 0 |
 | Seconds per report (median) | **37** | 110 |
 
-The 31B is the reader.
+The live app runs **one Gemma 4 12B for both jobs**: its own weights read the report and our LoRA (same vLLM server) writes the explanation. The 31B reads better and faster, but it was only ever the teacher, and one model leaves the shared GPU box room for other work. The cost: one low HDL read as normal (a misread printed range), and about two minutes per report.
 
 **Explainer.** Test set: 36 cases × 2 runs = 72 answers. "Passes" = clears the automatic checks *and* a Gemma 4 31B judge.
 
