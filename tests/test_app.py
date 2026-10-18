@@ -115,7 +115,20 @@ def test_shop_poster(client):
     from app.main import shop_code
     assert shop_code("Ravi Medicals, MG Road!") == "ravi-medicals-mg-road"
     page = client.get("/shop", params={"name": "Ravi Medicals <b>"}).text
-    assert "<svg" in page and "?shop=ravi-medicals-b" in page and "Ravi Medicals &lt;b&gt;" in page and "<b>Ravi" not in page
-    client.post("/api/jobs", files={"file": ("r.pdf", b"%PDF x", "application/pdf")}, data={"pregnant": "no", "shop": "ravi-medicals-b"})
-    assert "(1 so far)" in client.get("/shop", params={"name": "Ravi Medicals <b>"}).text
-    assert "<svg" in client.get("/shop").text                                  # no name yet: plain link, still a poster
+    assert "<svg" in page and "/s/ravi-medicals-b" in page and "Ravi Medicals &lt;b&gt;" in page and "<b>Ravi" not in page
+    assert "Scan to see how it works" in page and "0 scans, 0 uploads" in page
+    assert "<svg" in client.get("/shop").text and "/example" in client.get("/shop").text   # no name yet: QR opens the example
+
+
+def test_scan_example_upload_path_counts_both(client):
+    # a customer scans the poster: counted, then sent to the example with the shop's code
+    r = client.get("/s/Ravi-Medicals", follow_redirects=False)
+    assert r.status_code == 302 and r.headers["location"] == "/example?shop=ravi-medicals"
+    ex = client.get(r.headers["location"]).text
+    assert 'href="/?shop=ravi-medicals"' in ex                                   # "Explain my own report" keeps the code
+    client.get("/s/ravi-medicals")                                               # a second customer only looks
+    # the first customer uploads from the upload page (which sends ?shop= with the form)
+    client.post("/api/jobs", files={"file": ("r.pdf", b"%PDF x", "application/pdf")}, data={"pregnant": "no", "shop": "ravi-medicals"})
+    assert client.get("/api/stats", params={"shop": "ravi-medicals"}).json() == {"shop": "ravi-medicals", "scans": 2, "reports": 1}
+    assert "2 scans, 1 uploads" in client.get("/shop", params={"name": "Ravi Medicals"}).text
+    assert 'href="/"' in client.get("/example").text                             # no shop: plain link

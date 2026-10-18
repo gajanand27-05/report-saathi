@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS jobs (
   pregnant TEXT, weeks INTEGER, patient TEXT, rows TEXT, lab_notes TEXT, text TEXT, error TEXT,
   created_at DOUBLE PRECISION NOT NULL, picked_at DOUBLE PRECISION);
 CREATE TABLE IF NOT EXISTS shop_counts (shop TEXT PRIMARY KEY, n INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS shop_scans (shop TEXT PRIMARY KEY, n INTEGER NOT NULL);
 """
 JSON_COLS = ("patient", "rows", "lab_notes")
 
@@ -82,6 +83,13 @@ class Db:
     def ahead(self, created_at):
         """How many waiting jobs were uploaded before this one."""
         r = self.one("SELECT COUNT(*) AS n FROM jobs WHERE status IN ('queued','confirmed') AND created_at < ?", (created_at,))
+        return r["n"] if r else 0
+
+    def count_scan(self, shop):
+        self.execute("INSERT INTO shop_scans (shop, n) VALUES (?, 1) ON CONFLICT (shop) DO UPDATE SET n = shop_scans.n + 1", (shop,))
+
+    def shop_scans(self, shop):
+        r = self.one("SELECT n FROM shop_scans WHERE shop = ?", (shop,))
         return r["n"] if r else 0
 
     def shop_count(self, shop):

@@ -1,6 +1,6 @@
 import base64, html, json, os, pathlib, re, time
 from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 import segno
 from lre.rules import evaluate
 from . import db as dbm
@@ -26,12 +26,15 @@ def index():
 
 
 @app.get("/example")
-def example_page():
+def example_page(shop: str = ""):
     # the saved example is written into the page itself, so the explanation shows even before (or without) any script
     ex = (STATIC / "example.json").read_text(encoding="utf-8")
     text = html.escape(json.loads(ex)["text"])
     page = (STATIC / "example.html").read_text(encoding="utf-8")
     page = page.replace('<div id="out">Loading…</div>', f'<div id="out" style="white-space:pre-line">{text}</div>')
+    code = shop_code(shop)
+    if code:  # came from a pharmacy's QR code: keep its code so the upload counts for that shop
+        page = page.replace('<a class="btn" href="/">', f'<a class="btn" href="/?shop={code}">')
     page = page.replace("<!--EXAMPLE_DATA-->", '<script id="ex" type="application/json">' + ex.replace("</", "<\\/") + "</script>")
     return HTMLResponse(page)
 
@@ -47,15 +50,24 @@ def shop_code(name: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:40]
 
 
+@app.get("/s/{code}")
+def scan(code: str):
+    """The poster's QR code: count the scan for that shop, then show the example (option A: see how it works first)."""
+    code = shop_code(code)
+    if code:
+        DB.count_scan(code)
+    return RedirectResponse(f"/example?shop={code}" if code else "/example", status_code=302)
+
+
 @app.get("/shop")
 def shop_poster(request: Request, name: str = ""):
     # a printable counter poster: QR code -> the upload page with this shop's code, so its uploads are counted
     name = name.strip()[:40]
     code = shop_code(name)
     proto = request.headers.get("x-forwarded-proto", request.url.scheme)
-    url = f"{proto}://{request.url.netloc}/" + (f"?shop={code}" if code else "")
+    url = f"{proto}://{request.url.netloc}/" + (f"s/{code}" if code else "example")
     qr = segno.make(url, error="m").svg_inline(scale=8, dark="#111111", light="#ffffff", border=2, omitsize=True)
-    count = f" ({DB.shop_count(code)} so far)" if code else ""
+    count = f": <b>{DB.shop_scans(code)} scans, {DB.shop_count(code)} uploads</b> so far" if code else ""
     page = (STATIC / "shop.html").read_text(encoding="utf-8")
     for k, v in {"{{QR}}": qr, "{{URL}}": html.escape(url), "{{NAME_VALUE}}": html.escape(name, quote=True),
                  "{{CODE_TEXT}}": html.escape(code or "no shop yet: type your shop's name below"), "{{COUNT}}": count,
@@ -132,7 +144,7 @@ def health():
 
 @app.get("/api/stats")
 def stats(shop: str):
-    return {"shop": shop, "reports": DB.shop_count(shop)}
+    return {"shop": shop, "scans": DB.shop_scans(shop), "reports": DB.shop_count(shop)}
 
 
 _last_cleanup = 0.0

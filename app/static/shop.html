@@ -32,20 +32,20 @@ main{max-width:620px;margin:auto;padding:20px 16px 32px}.muted{color:var(--muted
 </style></head><body><main>
 <div class="tools">
  <h1>Counter poster for your pharmacy</h1>
- <p class="muted" style="margin:0">Print this and put it near the counter. Customers scan the code and upload their lab report.
- Reports from your shop are counted under <b>{{CODE_TEXT}}</b>{{COUNT}}.</p>
+ <p class="muted" style="margin:0">Print this and put it near the counter. Customers scan the code, see a finished example, then upload their own report.
+ Your shop's code is <b>{{CODE_TEXT}}</b>{{COUNT}}.</p>
  <form method="get" action="/shop"><input name="name" placeholder="Your shop's name" value="{{NAME_VALUE}}" maxlength="40" aria-label="Shop name"><button>Make poster</button></form>
  <p style="margin:10px 0 0"><a href="#" onclick="print();return false" style="font-weight:600">Print the poster →</a></p>
 </div>
 <section class="poster">
  {{SHOP_LINE}}
  <h2>Got your lab report?</h2>
- <p class="sub">Understand it in simple words, in a couple of minutes.</p>
+ <p class="sub">Understand it in simple words.</p>
  <div class="qr" role="img" aria-label="QR code that opens Report Saathi">{{QR}}</div>
  <ol>
-  <li>Scan with your phone camera</li>
-  <li>Upload the PDF or a photo of your report</li>
-  <li>See what's worth asking your doctor about</li>
+  <li>Scan to see how it works</li>
+  <li>Tap "Explain my own report" and upload the PDF or a photo</li>
+  <li>In about two minutes, see what's worth asking your doctor about</li>
  </ol>
  <p class="small">Free. No account. Your report is deleted within 24 hours.<br>It explains your report. It is not a diagnosis. Please show your report to your doctor.</p>
  <p class="url">{{URL}}</p>
