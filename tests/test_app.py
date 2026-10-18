@@ -54,6 +54,9 @@ def test_cleanup(client, tmp_path):
 def test_pages(client):
     assert "Upload" in client.get("/").text
     assert client.get("/r/abc").status_code == 200
+    assert "Example" in client.get("/example").text
+    ex = client.get("/api/example").json()
+    assert ex["synthetic"] is True and ex["rows"] and "not a diagnosis" in ex["text"]
 
 
 def test_worker_poll_cleans_up_old_jobs(client):

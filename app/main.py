@@ -21,6 +21,17 @@ def index():
     return FileResponse(STATIC / "index.html")
 
 
+@app.get("/example")
+def example_page():
+    return FileResponse(STATIC / "example.html")
+
+
+@app.get("/api/example")
+def example_data():
+    # a finished explanation of a SYNTHETIC report, served by the web app alone: works even when no worker is running
+    return FileResponse(STATIC / "example.json", media_type="application/json")
+
+
 @app.get("/r/{jid}")
 def result_page(jid: str):
     return FileResponse(STATIC / "result.html")

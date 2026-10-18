@@ -1,0 +1,26 @@
+{
+ "synthetic": true,
+ "case": "S13_hb_T2_normal_for_preg",
+ "model": "Gemma 4 31B",
+ "eval_tag": "v2-31b-base",
+ "patient": {
+  "age": 24,
+  "sex": "F",
+  "pregnant": true,
+  "weeks": 22
+ },
+ "rows": [
+  {
+   "test": "Haemoglobin",
+   "value": 11.2,
+   "unit": "g/dL",
+   "range_used": ">=10.5",
+   "range_label": "pregnancy range, 2nd trimester (our table); the lab's non-pregnant range 12.0-15.0 would call it low",
+   "flag": "Normal",
+   "importance": 1,
+   "note": "normal for this stage of pregnancy; the usual non-pregnant range (12-15) would call it low"
+  }
+ ],
+ "lab_notes": [],
+ "text": "Overview: All your results are within the normal range. There are 0 values worth asking your doctor about.\n\nNormal: Your haemoglobin (the protein in your blood that carries oxygen) is normal.\n\nNotes: Your haemoglobin is normal for this stage of pregnancy, though it would be considered low if you were not pregnant.\n\nThis explains your report. It is not a diagnosis. Please show this report to your doctor."
+}
