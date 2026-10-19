@@ -94,7 +94,9 @@ Changed in prompt v1.4 / judge v3 (`lre/explainer_prompt.md`, `lre/checks.py`), 
 
 The submission deadline was 18 October 2026, 11:59 PM PDT (19 October, 12:29 PM IST). Commits after it are listed here.
 
-- *(none yet)*
+- `b85d194` (19 Oct): timing text only. "About two minutes per report" became "about a minute for a short report, 3–5 minutes for a full check-up", as measured on the live app (README, upload page, poster).
+- `4286aec` (19 Oct): bug fix. The reader can return a printed range with an empty (`null`) label; the rules code crashed on it, which made a real report fail on the live app on 18 Oct. Now treated as empty, with a test. The DGX worker already ran this fix since 18 Oct 22:58.
+- The live GPU server's context was raised from 8,192 to 16,384 tokens on 18 Oct ~22:35 (a server setting, not a code change), after big reports failed at the explain step.
 
 ## Repo layout
 
