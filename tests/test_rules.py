@@ -221,3 +221,18 @@ def test_null_ranges_from_the_reader_do_not_crash():
     assert widal["rows"][0]["flag"] in ("Positive", "Normal", "Abnormal")
     no_ranges = evaluate([{"test": "HDL cholesterol", "value": 38.0, "unit": "mg/dL", "ranges": None}], p)
     assert no_ranges["rows"][0]["flag"] == "Low"
+
+
+def test_lab_boilerplate_is_dropped_but_report_notes_kept():
+    # the live result of 19 Oct quoted the lab's generic LFT paragraphs verbatim (synthetic wording below)
+    notes = ["RBC Morphology: Microcytic Hypochromic cells seen.", "Impression: S/O Normal Peripheral Smear",
+             "Hemoparasites: Not-Detected", "Advise: Kindly correlate clinically",
+             "Interpretation: LFTs assess liver health. AST and ALT rise with liver cell damage.",
+             "Limitations: LFT results can be affected by non-liver conditions.",
+             "Associated Tests: Additional tests such as PT/INR may help.",
+             "Note: Repeat testing with a fresh sample is recommended if the results do not correlate.",
+             "A single positive Widal titre is not diagnostic of enteric fever, and clinical correlation along with culture-based "
+             "confirmation is recommended wherever feasible, because titres vary with region, prior infection and vaccination.",
+             None, ""]
+    kept = evaluate([], {"age": 40, "sex": "M"}, notes)["lab_notes"]
+    assert kept == notes[:4]

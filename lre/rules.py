@@ -254,6 +254,20 @@ def _minor(v, iv: Interval, pct: float) -> bool:
     return edge not in (None, 0) and abs(v - edge) / abs(edge) < pct
 
 
+# The lab's generic paragraphs (what a test is, its limits, other tests to consider) are not about this patient.
+# The reader is told to skip them, but the 12B sometimes keeps them; the explainer would then quote them verbatim.
+BOILERPLATE_FIELDS = ("interpretation", "limitation", "associated test", "reference", "method", "clinical significance",
+                      "note", "comment", "disclaimer", "remark")
+MAX_NOTE_CHARS = 200  # report-specific notes are short ("Impression: S/O Normal Peripheral Smear"); boilerplate runs long
+
+
+def keep_lab_note(note) -> bool:
+    if not isinstance(note, str) or not note.strip():
+        return False
+    field = note.split(":", 1)[0].strip().lower() if ":" in note[:40] else ""
+    return len(note) <= MAX_NOTE_CHARS and not any(field.startswith(f) for f in BOILERPLATE_FIELDS)
+
+
 def evaluate(raw_rows: list, patient: dict, lab_notes=()) -> dict:
     # The report's own sex wins over the upload form: someone may upload a family member's report and answer the
     # pregnancy question about themselves. A male report is never judged by pregnancy ranges.
@@ -350,4 +364,4 @@ def evaluate(raw_rows: list, patient: dict, lab_notes=()) -> dict:
             row["importance"] = 2
         elif row["flag"] in ("Low", "High") and _minor(v, iv, rule.minor_pct):
             row["importance"] = 2
-    return {"patient": patient, "rows": out, "lab_notes": list(lab_notes)}
+    return {"patient": patient, "rows": out, "lab_notes": [n for n in (lab_notes or []) if keep_lab_note(n)]}
