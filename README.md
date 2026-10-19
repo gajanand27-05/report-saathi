@@ -96,6 +96,7 @@ The submission deadline was 18 October 2026, 11:59 PM PDT (19 October, 12:29 PM 
 
 - `b85d194` (committed 18 Oct, pushed 19 Oct after the deadline): timing text only. "About two minutes per report" became "about a minute for a short report, 3–5 minutes for a full check-up", as measured on the live app (README, upload page, poster).
 - `4286aec` (19 Oct): bug fix. The reader can return a printed range with an empty (`null`) label; the rules code crashed on it, which made a real report fail on the live app on 18 Oct. Now treated as empty, with a test. The DGX worker already ran this fix since 18 Oct 22:58.
+- `3410e09` (19 Oct): bug fix. On a real report the explanation quoted the lab's generic paragraphs ("Interpretation: LFTs assess liver health…", "Limitations…") as if they were notes about the patient. The rules now drop notes headed Interpretation, Limitations, Associated tests, Note and similar, and any note over 200 characters; all 96 report-specific notes in our 27 test reports are kept. With a test.
 
 For completeness, before the deadline (18 Oct ~22:35): the live GPU server's context was raised from 8,192 to 16,384 tokens (a server setting, not a code change), after big reports failed at the explain step.
 
