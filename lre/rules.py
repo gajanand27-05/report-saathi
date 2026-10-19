@@ -261,6 +261,8 @@ def evaluate(raw_rows: list, patient: dict, lab_notes=()) -> dict:
         patient = dict(patient, pregnant=False, weeks=None)
     out = []
     for raw in raw_rows:
+        # the reader can return null for a range's label/text (or for ranges itself): treat as empty
+        raw = dict(raw, ranges=[dict(r, label=r.get("label") or "", text=r.get("text") or "") for r in raw.get("ranges") or []])
         name, unit = raw.get("test", ""), raw.get("unit", "") or ""
         rule = match_rule(name)
         v = _value(raw.get("value"))

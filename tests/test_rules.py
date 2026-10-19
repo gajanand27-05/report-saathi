@@ -209,3 +209,15 @@ def test_male_report_never_uses_pregnancy_ranges():
     assert out["rows"][0]["flag"] == "Low" and "pregnan" not in (out["rows"][0]["range_label"] or "")
     # the same values for a woman 20 weeks pregnant use the trimester range
     assert "pregnan" in evaluate(rows, {"age": 28, "sex": "F", "pregnant": True, "weeks": 20})["rows"][0]["range_label"]
+
+
+def test_null_ranges_from_the_reader_do_not_crash():
+    # the live failure of 18 Oct (job dc8f4380): the reader returned a range with "label": null
+    p = {"age": 30, "sex": "M", "pregnant": False, "weeks": None}
+    hdl = evaluate([{"test": "HDL cholesterol", "value": 38.0, "unit": "mg/dL", "ranges": [{"label": None, "text": "40-60"}]}], p)
+    assert hdl["rows"][0]["flag"] == "Low"
+    widal = evaluate([{"test": "Widal test: Salmonella Typhi O", "value": "1:160", "unit": "",
+                       "ranges": [{"label": "1:80 & Above Significant", "text": None}]}], p)
+    assert widal["rows"][0]["flag"] in ("Positive", "Normal", "Abnormal")
+    no_ranges = evaluate([{"test": "HDL cholesterol", "value": 38.0, "unit": "mg/dL", "ranges": None}], p)
+    assert no_ranges["rows"][0]["flag"] == "Low"
